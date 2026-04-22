@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Explorer — Four Ways AI Finds Answers</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+/* Seeing Theory exact palette from screenshots */
+–orange:    #e8a838;
+–orange-dk: #d4942a;
+–teal:      #5bc8af;
+–navy:      #2d2d3f;
+–text:      #333333;
+–text2:     #555555;
+–text3:     #888888;
+–white:     #ffffff;
+–border:    #e0e0e0;
+
+/* Per-chapter background colours — muted, soft, like Seeing Theory */
+–ch1-bg:    #c8dce8;   /* powder blue  — Traditional */
+–ch2-bg:    #f5e6d8;   /* warm cream   — Vectorless  */
+–ch3-bg:    #d4e8d4;   /* sage green   — Graph       */
+–ch4-bg:    #e8daf0;   /* soft lavender— Agentic     */
+
+/* Chapter accent colours for SVG/buttons */
+–ch1-accent:#4a90c4;
+–ch2-accent:#e8a838;
+–ch3-accent:#4caf7d;
+–ch4-accent:#9b6fc4;
+
+–font: ‘Assistant’, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(–font); color: var(–text); background: #f4f4f0; }
+
+/* ── NAV ── */
+nav {
+background: var(–navy);
+padding: 0 2rem;
+display: flex; align-items: center; gap: 0;
+position: sticky; top: 0; z-index: 200;
+height: 52px;
+}
+.nav-brand {
+font-size: 0.85rem; font-weight: 700; color: #ffffff;
+letter-spacing: 0.04em; margin-right: 2rem; white-space: nowrap;
+}
+.nav-links { display: flex; gap: 0; flex: 1; }
+.nav-link {
+font-size: 0.78rem; font-weight: 400; color: rgba(255,255,255,0.65);
+text-decoration: none; padding: 0 1.1rem; height: 52px;
+display: flex; align-items: center;
+border-right: 1px solid rgba(255,255,255,0.1);
+transition: all 0.15s; white-space: nowrap; cursor: pointer;
+}
+.nav-link:first-child { border-left: 1px solid rgba(255,255,255,0.1); }
+.nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.08); }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; flex-shrink: 0; }
+.nav-right { margin-left: auto; font-size: 0.72rem; color: rgba(255,255,255,0.45); white-space: nowrap; }
+
+/* ── HOME SECTION ── */
+.home-section {
+background: var(–navy);
+color: white;
+padding: 5rem 2rem 5rem;
+text-align: center;
+}
+.home-eyebrow {
+font-size: 0.72rem; font-weight: 600; letter-spacing: 0.18em;
+text-transform: uppercase; color: var(–orange); margin-bottom: 1.2rem;
+}
+.home-title {
+font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 700;
+line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1.2rem;
+color: #ffffff;
+}
+.home-title em { font-style: italic; color: var(–orange); font-weight: 300; }
+.home-sub {
+font-size: 1rem; font-weight: 300; color: rgba(255,255,255,0.7);
+line-height: 1.8; max-width: 560px; margin: 0 auto 2.5rem;
+}
+.home-sub strong { font-weight: 600; color: rgba(255,255,255,0.9); }
+
+/* ── CHAPTER CARDS on home ── */
+.chapter-cards {
+display: grid; grid-template-columns: repeat(4, 1fr);
+gap: 1px; background: rgba(255,255,255,0.1);
+max-width: 900px; margin: 0 auto;
+}
+.chapter-card {
+background: var(–navy); padding: 2rem 1.4rem;
+text-decoration: none; transition: background 0.2s; display: block;
+}
+.chapter-card:hover { background: rgba(255,255,255,0.06); }
+.cc-icon {
+width: 56px; height: 56px; border-radius: 50%;
+background: #1e1e2e;
+display: flex; align-items: center; justify-content: center;
+margin: 0 auto 1rem; font-size: 1.4rem;
+}
+.cc-chapter { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.4rem; }
+.cc-title { font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem; line-height: 1.3; }
+.cc-desc { font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.5; font-weight: 300; }
+.cc-bar { height: 3px; margin-top: 1.2rem; border-radius: 1px; }
+
+/* ── CHAPTER SECTIONS ── */
+.chapter-section {
+display: flex; min-height: 100vh;
+scroll-margin-top: 52px;
+}
+
+/* LEFT PANEL — coloured, scrollable */
+.left-panel {
+width: 340px; flex-shrink: 0;
+padding: 3rem 2rem 4rem;
+overflow-y: auto;
+position: relative;
+}
+.lp-chapter-label {
+font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em;
+text-transform: uppercase; color: rgba(0,0,0,0.45); margin-bottom: 0.5rem;
+}
+.lp-title {
+font-size: 2rem; font-weight: 700; line-height: 1.2;
+color: var(–text); margin-bottom: 1.2rem; letter-spacing: -0.02em;
+}
+.lp-desc {
+font-size: 0.9rem; font-weight: 300; color: var(–text2);
+line-height: 1.8; margin-bottom: 1.4rem;
+}
+.lp-desc strong { font-weight: 600; color: var(–text); }
+.lp-best {
+font-size: 0.75rem; color: var(–text3); margin-bottom: 1.8rem;
+display: flex; align-items: center; gap: 0.4rem;
+}
+.lp-best strong { color: var(–text2); font-weight: 600; }
+
+/* Controls */
+.control-block { margin-bottom: 1.6rem; }
+.control-label {
+font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em;
+text-transform: uppercase; color: var(–text3); margin-bottom: 0.6rem;
+}
+.query-pills { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.8rem; }
+.query-pill {
+font-size: 0.8rem; font-weight: 400; color: var(–text2);
+background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.15);
+padding: 0.45rem 0.85rem; cursor: pointer; transition: all 0.15s;
+text-align: left; border-radius: 2px;
+}
+.query-pill:hover { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.3); }
+.query-pill.active { background: var(–white); border-color: var(–accent); color: var(–accent); font-weight: 600; }
+
+.query-input {
+width: 100%; padding: 0.65rem 0.8rem;
+background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.15);
+font-family: var(–font); font-size: 0.82rem; color: var(–text);
+outline: none; resize: none; height: 62px; border-radius: 2px;
+transition: all 0.15s; margin-bottom: 0.7rem;
+}
+.query-input:focus { background: white; border-color: var(–accent); }
+.query-input::placeholder { color: var(–text3); }
+
+.btn-primary {
+width: 100%; padding: 0.7rem 1rem;
+background: var(–accent); border: none; border-radius: 2px;
+font-family: var(–font); font-size: 0.82rem; font-weight: 700;
+color: white; cursor: pointer; transition: all 0.15s; margin-bottom: 0.4rem;
+letter-spacing: 0.02em;
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-secondary {
+width: 100%; padding: 0.6rem 1rem;
+background: transparent; border: 1px solid rgba(0,0,0,0.2); border-radius: 2px;
+font-family: var(–font); font-size: 0.78rem; font-weight: 400;
+color: var(–text2); cursor: pointer; transition: all 0.15s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.35); }
+
+/* Step nav inside left panel */
+.step-progress { margin-bottom: 1.2rem; }
+.step-track-v {
+display: flex; flex-direction: column; gap: 0;
+}
+.step-item {
+display: flex; align-items: flex-start; gap: 0.75rem;
+padding: 0.55rem 0;
+border-left: 2px solid rgba(0,0,0,0.1);
+padding-left: 0.9rem; cursor: pointer;
+transition: all 0.2s;
+}
+.step-item.active { border-left-color: var(–accent); }
+.step-item.done { border-left-color: var(–accent); opacity: 0.5; }
+.step-num {
+width: 20px; height: 20px; border-radius: 50%;
+background: rgba(0,0,0,0.1); display: flex; align-items: center;
+justify-content: center; font-size: 0.6rem; font-weight: 700;
+flex-shrink: 0; color: var(–text3); transition: all 0.2s;
+}
+.step-item.active .step-num { background: var(–accent); color: white; }
+.step-item.done .step-num { background: var(–accent); color: white; }
+.step-name { font-size: 0.78rem; font-weight: 400; color: var(–text3); padding-top: 1px; transition: all 0.2s; }
+.step-item.active .step-name { color: var(–text); font-weight: 600; }
+
+.explainer-box {
+background: rgba(255,255,255,0.6); border-radius: 3px;
+padding: 0.9rem 1rem; margin-bottom: 1rem;
+font-size: 0.82rem; font-weight: 300; color: var(–text2); line-height: 1.7;
+}
+.explainer-box strong { font-weight: 600; color: var(–text); }
+
+.nav-hint { font-size: 0.72rem; color: var(–text3); text-align: center; margin-top: 0.5rem; line-height: 1.5; }
+
+/* RIGHT PANEL — pure white canvas */
+.right-panel {
+flex: 1; background: var(–white);
+display: flex; flex-direction: column;
+position: relative; overflow: visible;
+}
+.canvas-area {
+flex: 1; padding: 3rem 3rem 2rem;
+display: flex; flex-direction: column; justify-content: flex-start;
+min-height: 200px;
+}
+.canvas-empty {
+flex: 1; display: flex; flex-direction: column;
+align-items: center; justify-content: center;
+color: #d0d0d0;
+}
+.canvas-empty-icon { font-size: 3rem; margin-bottom: 0.8rem; opacity: 0.3; }
+.canvas-empty-text { font-size: 0.82rem; font-weight: 300; }
+
+/* ── VISUALISATION COMPONENTS ── */
+.vis-section { margin-bottom: 2rem; }
+.vis-label {
+font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em;
+text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.9rem;
+}
+
+/* Chunk list */
+.chunk-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.chunk-row {
+display: flex; gap: 0.75rem; align-items: flex-start;
+opacity: 0; transform: translateX(-12px);
+transition: all 0.4s ease;
+font-size: 0.83rem; color: var(–text2); line-height: 1.6;
+}
+.chunk-row.in { opacity: 1; transform: translateX(0); }
+.chunk-tag {
+font-size: 0.62rem; font-weight: 600; padding: 0.15rem 0.6rem;
+border-radius: 2rem; flex-shrink: 0; margin-top: 2px;
+white-space: nowrap;
+}
+
+/* Embed pairs */
+.embed-list { display: flex; flex-direction: column; gap: 1rem; }
+.embed-pair {
+display: grid; grid-template-columns: 1fr 32px 1fr; gap: 0;
+align-items: center; opacity: 0; transition: opacity 0.5s;
+}
+.embed-pair.in { opacity: 1; }
+.embed-src {
+padding: 0.65rem 0.9rem; background: #f9f9f9;
+border: 1px solid #ebebeb; font-size: 0.78rem;
+color: var(–text2); line-height: 1.5;
+}
+.embed-arrow { text-align: center; color: #cccccc; font-size: 1.1rem; }
+.embed-vec {
+padding: 0.65rem 0.9rem; border: 1px solid;
+font-family: ‘Courier New’, monospace; font-size: 0.68rem; line-height: 1.5;
+}
+
+/* Similarity bars */
+.sim-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.sim-row {
+display: flex; align-items: center; gap: 0.9rem;
+padding: 0.5rem 0.8rem; background: #f9f9f9;
+opacity: 0; transition: opacity 0.4s;
+}
+.sim-row.in { opacity: 1; }
+.sim-row.winner { background: #fffbf3; outline: 2px solid var(–accent); }
+.sim-txt { font-size: 0.75rem; color: var(–text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sim-bar { height: 6px; background: #e8e8e8; border-radius: 3px; width: 120px; flex-shrink: 0; overflow: hidden; }
+.sim-fill { height: 100%; border-radius: 3px; width: 0%; transition: width 1s ease; background: #cccccc; }
+.sim-row.winner .sim-fill { background: var(–accent); }
+.sim-pct { font-size: 0.72rem; width: 34px; text-align: right; flex-shrink: 0; color: #aaaaaa; }
+.sim-row.winner .sim-pct { color: var(–accent); font-weight: 700; }
+
+/* Retrieved */
+.retrieved {
+border-left: 4px solid var(–accent);
+padding: 1.1rem 1.3rem; background: #fffbf3;
+margin-bottom: 0.6rem;
+}
+.ret-badge {
+font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+text-transform: uppercase; color: var(–accent); margin-bottom: 0.5rem;
+}
+.ret-body { font-size: 0.85rem; color: var(–text); line-height: 1.7; }
+.ret-body .kw { font-weight: 700; }
+.ret-note { font-size: 0.73rem; color: var(–text3); margin-top: 0.5rem; font-style: italic; }
+
+/* Answer */
+.answer-box {
+border-left: 4px solid var(–accent);
+padding: 1.1rem 1.3rem;
+font-size: 1rem; line-height: 1.8; color: var(–text);
+font-style: italic; min-height: 50px; margin-bottom: 0.5rem;
+}
+.answer-meta { font-size: 0.72rem; color: var(–text3); }
+.answer-meta span { font-weight: 600; color: var(–text2); }
+
+/* Vectorless */
+.idx-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.idx-row {
+display: flex; gap: 0.75rem; align-items: flex-start;
+padding: 0.6rem 0.8rem; background: #f9f9f9;
+opacity: 0; transform: translateY(6px); transition: all 0.35s;
+font-size: 0.8rem; color: var(–text2); line-height: 1.6;
+}
+.idx-row.in { opacity: 1; transform: translateY(0); }
+.idx-kw { font-weight: 700; }
+
+.expand-flow { display: flex; flex-direction: column; gap: 0.6rem; }
+.expand-step { opacity: 0; transform: translateY(5px); transition: all 0.35s; }
+.expand-step.in { opacity: 1; transform: translateY(0); }
+.expand-lbl { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.35rem; }
+.expand-box {
+padding: 0.7rem 0.9rem; background: #f9f9f9;
+border: 1px solid #ebebeb; font-size: 0.82rem; color: var(–text2); line-height: 1.6;
+}
+.expand-box.highlighted { background: #fffbf3; border-color: var(–accent); color: var(–accent); font-weight: 600; font-family: ‘Courier New’, monospace; font-size: 0.75rem; }
+.expand-divider {
+text-align: center; font-size: 0.68rem; color: #bbbbbb;
+display: flex; align-items: center; gap: 0.6rem;
+}
+.expand-divider::before, .expand-divider::after { content: ‘’; flex: 1; height: 1px; background: #ebebeb; }
+.kw-cloud { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.7rem 0.8rem; background: #f9f9f9; min-height: 42px; }
+.kw-pill {
+font-size: 0.72rem; padding: 0.2rem 0.65rem; border-radius: 2rem;
+border: 1px solid; font-weight: 600;
+opacity: 0; transform: scale(0.8); transition: all 0.25s;
+}
+.kw-pill.in { opacity: 1; transform: scale(1); }
+
+.bm25-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.bm25-row {
+padding: 0.6rem 0.8rem; background: #f9f9f9;
+opacity: 0; transform: translateX(-6px); transition: all 0.35s;
+}
+.bm25-row.in { opacity: 1; transform: translateX(0); }
+.bm25-row.winner { background: #fffbf3; outline: 2px solid var(–accent); }
+.bm25-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.4rem; }
+.bm25-clause { font-size: 0.75rem; color: var(–text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm25-score { font-size: 0.72rem; color: #aaaaaa; white-space: nowrap; }
+.bm25-row.winner .bm25-score { color: var(–accent); font-weight: 700; }
+.bm25-hits { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.4rem; }
+.ht { font-size: 0.65rem; padding: 0.1rem 0.45rem; border-radius: 2rem; }
+.ht.match { background: #fffbf3; border: 1px solid var(–accent); color: var(–accent); font-weight: 600; }
+.ht.miss { background: #f0f0f0; border: 1px solid #e0e0e0; color: #bbbbbb; text-decoration: line-through; }
+.bm25-bar-outer { height: 4px; background: #e8e8e8; border-radius: 2px; overflow: hidden; }
+.bm25-bar-fill { height: 100%; width: 0%; transition: width 0.8s ease; background: #cccccc; border-radius: 2px; }
+.bm25-row.winner .bm25-bar-fill { background: var(–accent); }
+
+/* Graph */
+.doc-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.doc-sent {
+padding: 0.6rem 0.8rem; background: #f9f9f9;
+font-size: 0.82rem; color: var(–text2); line-height: 1.6;
+opacity: 0; transform: translateX(-8px); transition: all 0.4s;
+}
+.doc-sent.in { opacity: 1; transform: translateX(0); }
+.ent { font-weight: 700; }
+.rel { font-style: italic; }
+.extract-row {
+display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;
+padding: 0.4rem 0.8rem; background: white; border-top: 1px solid #f0f0f0;
+opacity: 0; transition: opacity 0.3s;
+}
+.extract-row.in { opacity: 1; }
+.ext-e {
+font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 2px;
+font-weight: 600; border: 1px solid;
+}
+.ext-r {
+font-size: 0.62rem; padding: 0.1rem 0.5rem; border-radius: 2px;
+border: 1px solid; font-style: italic;
+}
+
+/* Graph canvas */
+.graph-vis { padding: 1rem 0.5rem; }
+.graph-legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(–text3); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.graph-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.55rem; }
+.gnode {
+padding: 0.32rem 0.75rem; border: 2px solid #e0e0e0;
+font-size: 0.72rem; color: var(–text2); background: white;
+border-radius: 3px; opacity: 0; transform: scale(0.88);
+transition: all 0.4s; white-space: nowrap;
+}
+.gnode.in { opacity: 1; transform: scale(1); }
+.gnode.traversed { font-weight: 700; }
+.gedge { font-size: 0.62rem; color: #bbbbbb; white-space: nowrap; opacity: 0; transition: opacity 0.3s; font-style: italic; }
+.gedge.in { opacity: 1; }
+.gedge.traversed { font-style: normal; font-weight: 600; }
+
+.ee-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.ee-card {
+padding: 0.7rem 0.9rem; background: #f9f9f9;
+font-size: 0.82rem; color: var(–text2); line-height: 1.6;
+opacity: 0; transform: translateY(5px); transition: all 0.35s;
+}
+.ee-card.in { opacity: 1; transform: translateY(0); }
+.ee-lbl { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.3rem; }
+
+.trav-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.trav-row {
+display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+padding: 0.5rem 0.8rem; background: #f9f9f9;
+opacity: 0; transform: translateX(-6px); transition: all 0.35s;
+font-size: 0.78rem;
+}
+.trav-row.in { opacity: 1; transform: translateX(0); }
+.trav-hop { font-size: 0.6rem; padding: 0.08rem 0.45rem; background: white; border: 1px solid #e0e0e0; flex-shrink: 0; border-radius: 2rem; color: var(–text3); }
+.trav-from { font-weight: 700; }
+.trav-rel { color: var(–text3); font-style: italic; font-size: 0.72rem; }
+.trav-flag { margin-left: auto; font-size: 0.6rem; padding: 0.1rem 0.5rem; border-radius: 2rem; flex-shrink: 0; }
+.trav-flag.danger { background: #ffeaea; border: 1px solid #ffaaaa; color: #cc4444; }
+.trav-flag.caution { background: #fff8ea; border: 1px solid #ffcc88; color: #cc8800; }
+
+.subgraph-box {
+border: 2px solid var(–accent); padding: 1.2rem; position: relative; margin-bottom: 0.7rem;
+}
+.sg-label { position: absolute; top: -11px; left: 1rem; background: var(–accent); color: white; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.65rem; border-radius: 2rem; }
+.sg-nodes, .sg-edges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; align-items: center; }
+.sg-rl { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #aaaaaa; }
+.sg-n { font-size: 0.7rem; padding: 0.15rem 0.55rem; border: 1px solid var(–accent); border-radius: 2px; font-weight: 600; }
+.sg-e { font-size: 0.7rem; padding: 0.15rem 0.55rem; border: 1px solid; border-radius: 2px; font-style: italic; }
+
+/* Agentic */
+.agent-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.agent-card {
+padding: 0.7rem 0.9rem; background: #f9f9f9;
+opacity: 0; transform: translateY(4px); transition: all 0.35s;
+}
+.agent-card.in { opacity: 1; transform: translateY(0); }
+.ac-lbl { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #aaaaaa; margin-bottom: 0.3rem; }
+.ac-body { font-size: 0.82rem; color: var(–text2); line-height: 1.6; }
+.plan-rows { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.35rem; }
+.plan-row {
+display: flex; gap: 0.6rem; padding: 0.4rem 0.75rem;
+background: white; border: 1px solid #f0f0f0;
+font-size: 0.77rem; color: var(–text2); opacity: 0;
+transform: translateX(-5px); transition: all 0.3s;
+}
+.plan-row.in { opacity: 1; transform: translateX(0); }
+.plan-num { font-weight: 700; flex-shrink: 0; }
+.plan-src { display: block; font-size: 0.63rem; color: #aaaaaa; margin-top: 1px; }
+
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; }
+.tool-card {
+padding: 0.9rem; background: #f9f9f9; text-align: center;
+opacity: 0; transform: scale(0.9); transition: all 0.3s;
+}
+.tool-card.in { opacity: 1; transform: scale(1); }
+.tool-card.selected { background: #fffbf3; outline: 2px solid var(–accent); }
+.tool-icon { font-size: 1.4rem; margin-bottom: 0.35rem; }
+.tool-name { font-size: 0.72rem; font-weight: 700; margin-bottom: 0.2rem; color: var(–text); }
+.tool-card.selected .tool-name { color: var(–accent); }
+.tool-desc { font-size: 0.63rem; color: var(–text3); line-height: 1.4; }
+.tool-badge { font-size: 0.58rem; margin-top: 0.3rem; padding: 0.1rem 0.5rem; background: #fffbf3; border: 1px solid var(–accent); color: var(–accent); border-radius: 2rem; display: inline-block; }
+
+.sq-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.sq-row {
+padding: 0.6rem 0.8rem; background: #f9f9f9;
+opacity: 0; transform: translateX(-5px); transition: all 0.35s;
+}
+.sq-row.in { opacity: 1; transform: translateX(0); }
+.sq-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+.sq-num { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.45rem; border: 1px solid var(–accent); color: var(–accent); border-radius: 2px; }
+.sq-tool { font-size: 0.62rem; padding: 0.1rem 0.45rem; border: 1px solid #7bb0e0; color: #4a80cc; border-radius: 2px; }
+.sq-status { margin-left: auto; font-size: 0.65rem; font-weight: 700; }
+.sq-status.ok { color: #4caf7d; }
+.sq-status.weak { color: #e05050; }
+.sq-q { font-size: 0.78rem; color: var(–text); margin-bottom: 0.25rem; font-weight: 600; }
+.sq-res { font-size: 0.73rem; color: var(–text3); line-height: 1.5; }
+
+.mem-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.mem-row {
+display: flex; gap: 0.6rem; align-items: flex-start;
+padding: 0.55rem 0.8rem;
+opacity: 0; transform: translateY(3px); transition: all 0.35s;
+font-size: 0.79rem; line-height: 1.5;
+}
+.mem-row.in { opacity: 1; transform: translateY(0); }
+.mem-row.k { background: #f0faf5; border-left: 3px solid #4caf7d; color: var(–text2); }
+.mem-row.g { background: #fff5f5; border-left: 3px solid #e05050; color: var(–text2); }
+.mem-icon { font-size: 0.9rem; flex-shrink: 0; }
+.mem-badge { font-size: 0.58rem; padding: 0.08rem 0.4rem; border-radius: 2rem; margin-left: 0.3rem; }
+.mem-badge.k { background: #e8f8f0; border: 1px solid #4caf7d; color: #3a9966; }
+.mem-badge.g { background: #ffeaea; border: 1px solid #e05050; color: #cc3333; }
+
+.conf-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.conf-row {
+display: flex; align-items: center; gap: 0.8rem;
+padding: 0.5rem 0.8rem; background: #f9f9f9;
+opacity: 0; transition: opacity 0.35s;
+}
+.conf-row.in { opacity: 1; }
+.conf-row.pass { border-left: 3px solid #4caf7d; }
+.conf-row.fail { border-left: 3px solid #e05050; }
+.conf-lbl { font-size: 0.75rem; color: var(–text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conf-bar { width: 90px; height: 5px; background: #e8e8e8; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.conf-fill { height: 100%; width: 0%; transition: width 0.9s ease; }
+.conf-fill.pass { background: #4caf7d; }
+.conf-fill.fail { background: #e05050; }
+.conf-pct { font-size: 0.68rem; width: 30px; text-align: right; flex-shrink: 0; }
+.conf-row.pass .conf-pct { color: #4caf7d; font-weight: 700; }
+.conf-row.fail .conf-pct { color: #e05050; font-weight: 700; }
+.conf-verdict { font-size: 0.6rem; padding: 0.1rem 0.5rem; border-radius: 2rem; font-weight: 700; flex-shrink: 0; }
+.conf-verdict.pass { background: #e8f8f0; border: 1px solid #4caf7d; color: #3a9966; }
+.conf-verdict.fail { background: #ffeaea; border: 1px solid #e05050; color: #cc3333; }
+
+.retry-log {
+background: #f9f9f9; padding: 0.9rem 1rem;
+font-family: ‘Courier New’, monospace; font-size: 0.72rem;
+max-height: 200px; overflow-y: auto;
+display: flex; flex-direction: column; gap: 0.25rem; line-height: 1.7;
+}
+.rlog { display: flex; gap: 0.5rem; opacity: 0; transition: opacity 0.25s; }
+.rlog.in { opacity: 1; }
+.rlog-txt.retry { color: #e05050; }
+.rlog-txt.action { color: var(–accent); }
+.rlog-txt.info { color: #4a80cc; }
+.rlog-txt.success { color: #4caf7d; font-weight: 700; }
+.rlog-txt { color: var(–text2); }
+
+.synth-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.synth-row {
+display: flex; gap: 0.7rem; align-items: flex-start;
+padding: 0.6rem 0.8rem; background: #f9f9f9;
+opacity: 0; transform: translateX(-5px); transition: all 0.35s;
+font-size: 0.79rem; color: var(–text2); line-height: 1.55;
+}
+.synth-row.in { opacity: 1; transform: translateX(0); }
+.synth-badge { font-size: 0.6rem; padding: 0.1rem 0.5rem; flex-shrink: 0; margin-top: 1px; border-radius: 2px; font-weight: 700; }
+.synth-badge.sq { border: 1px solid var(–accent); color: var(–accent); }
+.synth-badge.retry { border: 1px solid #4a80cc; color: #4a80cc; }
+.synth-ground {
+display: flex; gap: 0.6rem; align-items: center;
+padding: 0.6rem 0.8rem; background: #f0faf5; border-left: 3px solid #4caf7d;
+font-size: 0.79rem; color: #3a9966; margin-top: 0.35rem;
+opacity: 0; transition: opacity 0.4s;
+}
+.synth-ground.in { opacity: 1; }
+
+.src-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.7rem; }
+.src-chip { font-size: 0.72rem; padding: 0.18rem 0.65rem; border: 1px solid #e0e0e0; color: var(–text3); background: #f9f9f9; border-radius: 2px; }
+
+.vs-note {
+background: #f9f9f9; border-left: 3px solid #cccccc;
+padding: 0.7rem 0.9rem; font-size: 0.78rem; color: var(–text2); line-height: 1.6; margin-top: 0.6rem;
+}
+.vs-note strong { font-weight: 700; color: var(–text); }
+
+/* ── QUIZ SECTION ── */
+.quiz-section {
+background: #f4f4f0; padding: 4rem 2rem;
+}
+.quiz-inner { max-width: 700px; margin: 0 auto; }
+.quiz-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; color: var(–text); }
+.quiz-sub { font-size: 0.9rem; color: var(–text3); font-weight: 300; margin-bottom: 2rem; }
+.quiz-panel { background: white; }
+.quiz-prog-bar { height: 4px; background: #e8e8e8; }
+.quiz-prog-fill { height: 100%; background: var(–orange); transition: width 0.35s ease; width: 0%; }
+.quiz-body { padding: 2rem; }
+.quiz-step { display: none; }
+.quiz-step.active { display: block; }
+.qs-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(–text3); margin-bottom: 0.7rem; }
+.qs-q { font-size: 1.4rem; font-weight: 700; color: var(–text); margin-bottom: 1.5rem; line-height: 1.3; }
+.qs-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.qs-opt {
+border: 1px solid #e0e0e0; padding: 1rem; cursor: pointer;
+transition: all 0.15s; background: white; text-align: left;
+}
+.qs-opt:hover { border-color: var(–orange); background: #fffbf3; }
+.opt-title { font-size: 0.82rem; font-weight: 700; color: var(–text); margin-bottom: 0.3rem; }
+.opt-desc { font-size: 0.76rem; color: var(–text3); line-height: 1.45; font-weight: 300; }
+.quiz-result { display: none; }
+.quiz-result.active { display: block; }
+.res-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(–text3); margin-bottom: 0.5rem; }
+.res-title { font-size: 1.9rem; font-weight: 700; margin-bottom: 0.8rem; color: var(–text); }
+.res-why { font-size: 0.9rem; color: var(–text2); line-height: 1.8; font-weight: 300; margin-bottom: 1.2rem; }
+.res-why strong { font-weight: 700; color: var(–text); }
+.res-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem; }
+.res-tag { font-size: 0.75rem; padding: 0.2rem 0.65rem; border: 1px solid #e0e0e0; color: var(–text2); }
+.btn-quiz-restart {
+font-size: 0.78rem; padding: 0.55rem 1.3rem;
+border: 1px solid #e0e0e0; background: white; cursor: pointer;
+color: var(–text2); transition: all 0.15s; font-family: var(–font);
+}
+.btn-quiz-restart:hover { border-color: var(–orange); color: var(–orange); }
+
+/* ── FOOTER ── */
+footer {
+background: var(–navy); color: rgba(255,255,255,0.5);
+padding: 1.8rem 2rem; display: flex; justify-content: space-between;
+align-items: center; flex-wrap: wrap; gap: 1rem;
+font-size: 0.75rem;
+}
+footer span { color: rgba(255,255,255,0.8); }
+
+/* ── STICKY MOBILE NAV BAR ── */
+.mobile-step-bar {
+display: none;
+position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+background: white; border-top: 1px solid #e0e0e0;
+padding: 0.75rem 1rem;
+flex-direction: row; align-items: center; gap: 0.6rem;
+box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+.mobile-step-bar.visible { display: flex; }
+.msb-hint {
+font-size: 0.72rem; color: #aaaaaa; flex: 1;
+font-family: var(–font); line-height: 1.3;
+}
+.msb-restart {
+padding: 0.55rem 0.9rem; border: 1px solid #e0e0e0;
+background: white; font-family: var(–font);
+font-size: 0.75rem; color: #888; cursor: pointer;
+border-radius: 2px; white-space: nowrap; flex-shrink: 0;
+}
+.msb-next {
+padding: 0.65rem 1.3rem; border: none;
+font-family: var(–font); font-size: 0.82rem; font-weight: 700;
+color: white; cursor: pointer; border-radius: 2px;
+white-space: nowrap; flex-shrink: 0; transition: opacity 0.15s;
+letter-spacing: 0.02em;
+}
+.msb-next:hover { opacity: 0.88; }
+/* Space at bottom of canvas so content not hidden behind bar */
+/* canvas-area bottom set per breakpoint */
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+body { padding-bottom: 72px; }
+.chapter-section { flex-direction: column; min-height: auto; }
+.left-panel { width: 100%; min-height: auto; padding: 2rem 1.2rem 1.5rem; }
+.right-panel { min-height: 0; overflow: visible; }
+.canvas-area { padding: 1.5rem 1.2rem 6rem; min-height: 0; }
+.chapter-cards { grid-template-columns: 1fr 1fr; }
+.nav-links { display: none; }
+.qs-opts { grid-template-columns: 1fr; }
+.home-section { padding: 3rem 1.2rem 0; }
+.lp-title { font-size: 1.6rem; }
+/* Hide the in-panel next/restart/hint on mobile — sticky bar handles them */
+.mobile-hide { display: none !important; }
+.mobile-step-bar { display: none; }
+.mobile-step-bar.visible { display: flex; }
+/* Tighter chapter cards on very small screens */
+.cc-title { font-size: 0.85rem; }
+.cc-desc { display: none; }
+}
+
+@media (max-width: 400px) {
+.chapter-cards { grid-template-columns: 1fr; }
+}
+
+/* ── CHAPTER-SPECIFIC ACCENT COLOURS ── */
+/* Defined explicitly per class so Safari/iOS handles them correctly */
+
+.ch1-section { –accent: #4a90c4; }
+.ch2-section { –accent: #e8a838; }
+.ch3-section { –accent: #4caf7d; }
+.ch4-section { –accent: #9b6fc4; }
+
+/* btn-primary per chapter */
+.ch1-section .btn-primary { background: #4a90c4; }
+.ch2-section .btn-primary { background: #e8a838; }
+.ch3-section .btn-primary { background: #4caf7d; }
+.ch4-section .btn-primary { background: #9b6fc4; }
+
+/* query-pill active state per chapter */
+.ch1-section .query-pill.active { color: #4a90c4; border-color: #4a90c4; }
+.ch2-section .query-pill.active { color: #e8a838; border-color: #e8a838; }
+.ch3-section .query-pill.active { color: #4caf7d; border-color: #4caf7d; }
+.ch4-section .query-pill.active { color: #9b6fc4; border-color: #9b6fc4; }
+
+/* step-item active border */
+.ch1-section .step-item.active,
+.ch1-section .step-item.done { border-left-color: #4a90c4; }
+.ch1-section .step-item.active .step-num,
+.ch1-section .step-item.done .step-num { background: #4a90c4; }
+
+.ch2-section .step-item.active,
+.ch2-section .step-item.done { border-left-color: #e8a838; }
+.ch2-section .step-item.active .step-num,
+.ch2-section .step-item.done .step-num { background: #e8a838; }
+
+.ch3-section .step-item.active,
+.ch3-section .step-item.done { border-left-color: #4caf7d; }
+.ch3-section .step-item.active .step-num,
+.ch3-section .step-item.done .step-num { background: #4caf7d; }
+
+.ch4-section .step-item.active,
+.ch4-section .step-item.done { border-left-color: #9b6fc4; }
+.ch4-section .step-item.active .step-num,
+.ch4-section .step-item.done .step-num { background: #9b6fc4; }
+
+/* query-input focus border */
+.ch1-section .query-input:focus { border-color: #4a90c4; }
+.ch2-section .query-input:focus { border-color: #e8a838; }
+.ch3-section .query-input:focus { border-color: #4caf7d; }
+.ch4-section .query-input:focus { border-color: #9b6fc4; }
+
+/* chunk tags */
+.ch1-section .v-tag { border-color: #4a90c4; color: #4a90c4; }
+.ch2-section .v-tag { border-color: #e8a838; color: #e8a838; }
+.ch3-section .v-tag { border-color: #4caf7d; color: #4caf7d; }
+.ch4-section .v-tag { border-color: #9b6fc4; color: #9b6fc4; }
+
+/* retrieved box border */
+.ch1-section .retrieved { border-left-color: #4a90c4; }
+.ch2-section .retrieved { border-left-color: #e8a838; }
+.ch3-section .retrieved { border-left-color: #4caf7d; }
+.ch4-section .retrieved { border-left-color: #9b6fc4; }
+
+.ch1-section .ret-badge { color: #4a90c4; }
+.ch2-section .ret-badge { color: #e8a838; }
+.ch3-section .ret-badge { color: #4caf7d; }
+.ch4-section .ret-badge { color: #9b6fc4; }
+
+/* answer box */
+.ch1-section .answer-box { border-left-color: #4a90c4; }
+.ch2-section .answer-box { border-left-color: #e8a838; }
+.ch3-section .answer-box { border-left-color: #4caf7d; }
+.ch4-section .answer-box { border-left-color: #9b6fc4; }
+
+/* sim bar winner */
+.ch1-section .sim-row.winner { outline-color: #4a90c4; background: #f0f6fc; }
+.ch1-section .sim-row.winner .sim-fill { background: #4a90c4; }
+.ch1-section .sim-row.winner .sim-pct { color: #4a90c4; }
+.ch2-section .sim-row.winner { outline-color: #e8a838; background: #fffbf3; }
+.ch2-section .sim-row.winner .sim-fill { background: #e8a838; }
+.ch2-section .sim-row.winner .sim-pct { color: #e8a838; }
+
+/* embed vec colour */
+.ch1-section .embed-vec { color: #4a90c4; background: #e8f3fc; border-color: #4a90c4; }
+.ch2-section .embed-vec { color: #e8a838; background: #fffbf3; border-color: #e8a838; }
+
+</style>
+</head>
+<body>
+
+<!-- STICKY MOBILE STEP BAR -->
+
+<div class="mobile-step-bar" id="msb">
+  <span class="msb-hint" id="msb-hint">Select a question to begin</span>
+  <button class="msb-restart" id="msb-restart" onclick="msbRestart()" style="display:none">↺</button>
+  <button class="msb-next" id="msb-next" onclick="msbNext()" style="display:none;background:#4a90c4">Next →</button>
+</div>
+
+<!-- NAV -->
+
+<nav>
+  <div class="nav-brand">≡ RAG Explorer</div>
+  <div class="nav-links">
+    <span class="nav-link" onclick="goToSection('ch1')"><span class="nav-dot" style="background:#4a90c4"></span>Traditional RAG</span>
+    <span class="nav-link" onclick="goToSection('ch2')"><span class="nav-dot" style="background:#e8a838"></span>Vectorless RAG</span>
+    <span class="nav-link" onclick="goToSection('ch3')"><span class="nav-dot" style="background:#4caf7d"></span>Graph RAG</span>
+    <span class="nav-link" onclick="goToSection('ch4')"><span class="nav-dot" style="background:#9b6fc4"></span>Agentic RAG</span>
+    <span class="nav-link" onclick="goToSection('quiz')">Which RAG?</span>
+  </div>
+  <div class="nav-right">by Rashmi Singh</div>
+</nav>
+
+<!-- HOME -->
+
+<section style="background:var(--navy);color:white;padding:4.5rem 2rem 0;text-align:center;">
+  <div class="home-eyebrow">A visual introduction to AI retrieval</div>
+  <h1 class="home-title">How does AI <em>actually find</em> its answers?</h1>
+  <p class="home-sub">AI doesn't know everything. When it needs to answer from <strong>your data</strong>, it uses RAG — Retrieval Augmented Generation. There are four patterns. Each built for a different problem. <strong>Watch every step happen.</strong></p>
+  <div class="chapter-cards">
+    <div class="chapter-card" onclick="goToSection('ch1')" style="cursor:pointer">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-chapter">Chapter 1</div>
+      <div class="cc-title">Traditional RAG</div>
+      <div class="cc-desc">Semantic vector search across document chunks</div>
+      <div class="cc-bar" style="background:#4a90c4"></div>
+    </div>
+    <div class="chapter-card" onclick="goToSection('ch2')" style="cursor:pointer">
+      <div class="cc-icon">📋</div>
+      <div class="cc-chapter">Chapter 2</div>
+      <div class="cc-title">Vectorless RAG</div>
+      <div class="cc-desc">BM25 keyword scoring with LLM query expansion</div>
+      <div class="cc-bar" style="background:#e8a838"></div>
+    </div>
+    <div class="chapter-card" onclick="goToSection('ch3')" style="cursor:pointer">
+      <div class="cc-icon">🕸</div>
+      <div class="cc-chapter">Chapter 3</div>
+      <div class="cc-title">Graph RAG</div>
+      <div class="cc-desc">Knowledge graph traversal across entity connections</div>
+      <div class="cc-bar" style="background:#4caf7d"></div>
+    </div>
+    <div class="chapter-card" onclick="goToSection('ch4')" style="cursor:pointer">
+      <div class="cc-icon">🤖</div>
+      <div class="cc-chapter">Chapter 4</div>
+      <div class="cc-title">Agentic RAG</div>
+      <div class="cc-desc">Multi-step planning, tool selection, retry loops</div>
+      <div class="cc-bar" style="background:#9b6fc4"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+  CHAPTER 1 — TRADITIONAL RAG
+  Background: powder blue #c8dce8
+════════════════════════════════════ -->
+
+<section class="chapter-section ch1-section" id="ch1">
+  <div class="left-panel" style="background:#c8dce8">
+    <div class="lp-chapter-label">Chapter 1</div>
+    <h2 class="lp-title">Traditional RAG</h2>
+    <p class="lp-desc">Your question is converted into a <strong>vector</strong> — a mathematical fingerprint of its meaning. That fingerprint is compared against all document chunks to find the closest semantic match.</p>
+    <p class="lp-desc">Step through the process and watch exactly how every stage works.</p>
+    <div class="lp-best">Best for: <strong>FAQ & Knowledge Bases</strong></div>
+
+```
+<div class="control-block">
+  <div class="control-label">Choose a question</div>
+  <div class="query-pills">
+    <button class="query-pill" onclick="tSetPill(this,'Can I work from home?')">Can I work from home?</button>
+    <button class="query-pill" onclick="tSetPill(this,'How many days of annual leave do I get?')">How many annual leave days?</button>
+    <button class="query-pill" onclick="tSetPill(this,'What is the notice period if I resign?')">What is the notice period?</button>
+    <button class="query-pill" onclick="tSetPill(this,'What is my training budget?')">What is my training budget?</button>
+  </div>
+  <textarea class="query-input" id="t-qinput" placeholder="Or type your own HR policy question…"></textarea>
+  <button class="btn-primary" style="background:#4a90c4" onclick="tStart()">▶ Start</button>
+</div>
+
+<div id="t-controls" style="display:none">
+  <div class="control-block">
+    <div class="control-label">Steps</div>
+    <div class="step-track-v" id="t-steps"></div>
+  </div>
+  <div class="explainer-box" id="t-exp"></div>
+  <button class="btn-primary mobile-hide" style="background:#4a90c4" id="t-nbtn" onclick="tNext()">Next Step →</button>
+  <button class="btn-secondary mobile-hide" onclick="tRestart()" style="margin-top:0.4rem">↺ Restart</button>
+  <p class="nav-hint mobile-hide" id="t-hint"></p>
+</div>
+```
+
+  </div>
+  <div class="right-panel">
+    <div class="canvas-area" id="t-canvas">
+      <div class="canvas-empty" id="t-empty">
+        <div class="canvas-empty-icon">🔍</div>
+        <div class="canvas-empty-text">Select a question and click Start</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+  CHAPTER 2 — VECTORLESS RAG
+  Background: warm cream #f5e6d8
+════════════════════════════════════ -->
+
+<section class="chapter-section ch2-section" id="ch2">
+  <div class="left-panel" style="background:#f5e6d8">
+    <div class="lp-chapter-label">Chapter 2</div>
+    <h2 class="lp-title">Vectorless RAG</h2>
+    <p class="lp-desc">No embeddings. No vectors. An <strong>LLM expands your query</strong> into precise legal terminology, then BM25 scores every document by exact keyword frequency.</p>
+    <p class="lp-desc">When precise wording matters more than meaning, this wins.</p>
+    <div class="lp-best">Best for: <strong>Legal & Compliance</strong></div>
+
+```
+<div class="control-block">
+  <div class="control-label">Search the contract</div>
+  <div class="query-pills">
+    <button class="query-pill" onclick="vSetPill(this,'data retention period')">data retention period</button>
+    <button class="query-pill" onclick="vSetPill(this,'termination notice')">termination notice</button>
+    <button class="query-pill" onclick="vSetPill(this,'intellectual property ownership')">intellectual property ownership</button>
+    <button class="query-pill" onclick="vSetPill(this,'confidentiality obligations')">confidentiality obligations</button>
+  </div>
+  <textarea class="query-input" id="v-qinput" placeholder="Search for a contract clause…"></textarea>
+  <button class="btn-primary" style="background:#e8a838" onclick="vStart()">▶ Start</button>
+</div>
+
+<div id="v-controls" style="display:none">
+  <div class="control-block">
+    <div class="control-label">Steps</div>
+    <div class="step-track-v" id="v-steps"></div>
+  </div>
+  <div class="explainer-box" id="v-exp"></div>
+  <button class="btn-primary mobile-hide" style="background:#e8a838" id="v-nbtn" onclick="vNext()">Next Step →</button>
+  <button class="btn-secondary mobile-hide" onclick="vRestart()" style="margin-top:0.4rem">↺ Restart</button>
+  <p class="nav-hint mobile-hide" id="v-hint"></p>
+</div>
+```
+
+  </div>
+  <div class="right-panel">
+    <div class="canvas-area" id="v-canvas">
+      <div class="canvas-empty" id="v-empty">
+        <div class="canvas-empty-icon">📋</div>
+        <div class="canvas-empty-text">Select a clause and click Start</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+  CHAPTER 3 — GRAPH RAG
+  Background: sage green #d4e8d4
+════════════════════════════════════ -->
+
+<section class="chapter-section ch3-section" id="ch3">
+  <div class="left-panel" style="background:#d4e8d4">
+    <div class="lp-chapter-label">Chapter 3</div>
+    <h2 class="lp-title">Graph RAG</h2>
+    <p class="lp-desc">An LLM reads documents and builds a <strong>knowledge graph</strong> — entities connected by labelled edges. Queries traverse this graph hop by hop.</p>
+    <p class="lp-desc">Best when the answer depends on who is connected to what.</p>
+    <div class="lp-best">Best for: <strong>Fraud & Risk Detection</strong></div>
+
+```
+<div class="control-block">
+  <div class="control-label">Investigate the network</div>
+  <div class="query-pills">
+    <button class="query-pill" onclick="gSetPill(this,'alpha')">Is Alpha Corp linked to any risk entities?</button>
+    <button class="query-pill" onclick="gSetPill(this,'director')">Who is James Wong connected to?</button>
+    <button class="query-pill" onclick="gSetPill(this,'transfers')">What accounts are in suspicious transfers?</button>
+  </div>
+  <textarea class="query-input" id="g-qinput" placeholder="Select a query above…" readonly></textarea>
+  <button class="btn-primary" style="background:#4caf7d" onclick="gStart()">▶ Start</button>
+</div>
+
+<div id="g-controls" style="display:none">
+  <div class="control-block">
+    <div class="control-label">Steps</div>
+    <div class="step-track-v" id="g-steps"></div>
+  </div>
+  <div class="explainer-box" id="g-exp"></div>
+  <button class="btn-primary mobile-hide" style="background:#4caf7d" id="g-nbtn" onclick="gNext()">Next Step →</button>
+  <button class="btn-secondary mobile-hide" onclick="gRestart()" style="margin-top:0.4rem">↺ Restart</button>
+  <p class="nav-hint mobile-hide" id="g-hint"></p>
+</div>
+```
+
+  </div>
+  <div class="right-panel">
+    <div class="canvas-area" id="g-canvas">
+      <div class="canvas-empty" id="g-empty">
+        <div class="canvas-empty-icon">🕸</div>
+        <div class="canvas-empty-text">Select a query and click Start</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+  CHAPTER 4 — AGENTIC RAG
+  Background: soft lavender #e8daf0
+════════════════════════════════════ -->
+
+<section class="chapter-section ch4-section" id="ch4">
+  <div class="left-panel" style="background:#e8daf0">
+    <div class="lp-chapter-label">Chapter 4</div>
+    <h2 class="lp-title">Agentic RAG</h2>
+    <p class="lp-desc">An AI agent <strong>plans, selects tools, executes sub-queries, validates confidence, retries when weak</strong>, grounds the answer, and only then responds.</p>
+    <p class="lp-desc">The most powerful pattern — and the most expensive.</p>
+    <div class="lp-best">Best for: <strong>Complex Research</strong></div>
+
+```
+<div class="control-block">
+  <div class="control-label">Give the agent a task</div>
+  <div class="query-pills">
+    <button class="query-pill" onclick="aSetPill(this,'risk')">What are the key risks in our Q3 report vs benchmarks?</button>
+    <button class="query-pill" onclick="aSetPill(this,'market')">Summarise competitor pricing and recommend positioning.</button>
+    <button class="query-pill" onclick="aSetPill(this,'compliance')">Which processes conflict with the new data privacy regulation?</button>
+  </div>
+  <textarea class="query-input" id="a-qinput" placeholder="Select a complex task above…" readonly></textarea>
+  <button class="btn-primary" style="background:#9b6fc4" onclick="aStart()">▶ Deploy Agent</button>
+</div>
+
+<div id="a-controls" style="display:none">
+  <div class="control-block">
+    <div class="control-label">Steps</div>
+    <div class="step-track-v" id="a-steps"></div>
+  </div>
+  <div class="explainer-box" id="a-exp"></div>
+  <button class="btn-primary mobile-hide" style="background:#9b6fc4" id="a-nbtn" onclick="aNext()">Next Step →</button>
+  <button class="btn-secondary mobile-hide" onclick="aRestart()" style="margin-top:0.4rem">↺ Restart</button>
+  <p class="nav-hint mobile-hide" id="a-hint"></p>
+</div>
+```
+
+  </div>
+  <div class="right-panel">
+    <div class="canvas-area" id="a-canvas">
+      <div class="canvas-empty" id="a-empty">
+        <div class="canvas-empty-icon">🤖</div>
+        <div class="canvas-empty-text">Select a task and deploy the agent</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ QUIZ ═══════════════ -->
+
+<section class="quiz-section" id="quiz">
+  <div class="quiz-inner">
+    <h2 class="quiz-title">Which RAG suits your problem?</h2>
+    <p class="quiz-sub">Answer 3 quick questions and find out.</p>
+    <div class="quiz-panel">
+      <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="quiz-bar"></div></div>
+      <div class="quiz-body">
+        <div class="quiz-step active" id="qs1">
+          <div class="qs-label">Question 1 of 3</div>
+          <div class="qs-q">What kind of data are you working with?</div>
+          <div class="qs-opts">
+            <div class="qs-opt" onclick="quizAns(1,'docs')"><div class="opt-title">Documents & Text</div><div class="opt-desc">Manuals, policies, FAQs, reports</div></div>
+            <div class="qs-opt" onclick="quizAns(1,'legal')"><div class="opt-title">Contracts & Legal Text</div><div class="opt-desc">Precise terminology where exact wording matters</div></div>
+            <div class="qs-opt" onclick="quizAns(1,'graph')"><div class="opt-title">Entities & Relationships</div><div class="opt-desc">People, organisations, accounts — and connections</div></div>
+            <div class="qs-opt" onclick="quizAns(1,'mixed')"><div class="opt-title">Multiple Sources</div><div class="opt-desc">Docs, databases, APIs, web — complex research</div></div>
+          </div>
+        </div>
+        <div class="quiz-step" id="qs2">
+          <div class="qs-label">Question 2 of 3</div>
+          <div class="qs-q">How complex are your questions?</div>
+          <div class="qs-opts">
+            <div class="qs-opt" onclick="quizAns(2,'simple')"><div class="opt-title">Simple & Direct</div><div class="opt-desc">One question, one answer</div></div>
+            <div class="qs-opt" onclick="quizAns(2,'exact')"><div class="opt-title">Precise Lookups</div><div class="opt-desc">Find the exact clause — accuracy is critical</div></div>
+            <div class="qs-opt" onclick="quizAns(2,'connected')"><div class="opt-title">Multi-hop Relationships</div><div class="opt-desc">"Who is connected to X through Y?"</div></div>
+            <div class="qs-opt" onclick="quizAns(2,'complex')"><div class="opt-title">Complex & Multi-step</div><div class="opt-desc">Needs planning, sub-queries, validation</div></div>
+          </div>
+        </div>
+        <div class="quiz-step" id="qs3">
+          <div class="qs-label">Question 3 of 3</div>
+          <div class="qs-q">What matters most?</div>
+          <div class="qs-opts">
+            <div class="qs-opt" onclick="quizAns(3,'speed')"><div class="opt-title">Speed & Cost</div><div class="opt-desc">Fast, scalable, low overhead</div></div>
+            <div class="qs-opt" onclick="quizAns(3,'precision')"><div class="opt-title">Exact Precision</div><div class="opt-desc">No semantic drift — exact term match</div></div>
+            <div class="qs-opt" onclick="quizAns(3,'explainability')"><div class="opt-title">Explainability</div><div class="opt-desc">Show the reasoning path for audit</div></div>
+            <div class="qs-opt" onclick="quizAns(3,'depth')"><div class="opt-title">Depth & Accuracy</div><div class="opt-desc">Trade speed for comprehensive answers</div></div>
+          </div>
+        </div>
+        <div class="quiz-result" id="quiz-result">
+          <div class="res-label">Your recommended approach</div>
+          <div class="res-title" id="result-title"></div>
+          <div class="res-why" id="result-why"></div>
+          <div class="res-tags" id="result-tags"></div>
+          <button class="btn-quiz-restart" onclick="quizRestart()">↺ Start again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>RAG Explorer — <span>Created by Rashmi Singh</span> — An interactive guide to AI retrieval patterns</div>
+  <div style="display:flex;gap:0.5rem;">
+    <span style="border:1px solid rgba(255,255,255,0.15);padding:0.15rem 0.65rem;font-size:0.7rem;color:rgba(255,255,255,0.35);">No API key required</span>
+    <span style="border:1px solid rgba(255,255,255,0.15);padding:0.15rem 0.65rem;font-size:0.7rem;color:rgba(255,255,255,0.35);">Free to use</span>
+  </div>
+</footer>
+
+<script>
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// On mobile: scroll the canvas into view after each step
+function scrollToCanvas(canvasId) {
+  if (window.innerWidth <= 900) {
+    const el = document.getElementById(canvasId);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }
+}
+
+function typewrite(el, text, ms) {
+  let i = 0; el.textContent = '';
+  const iv = setInterval(() => { el.textContent += text[i++]; if (i >= text.length) clearInterval(iv); }, ms);
+}
+function fakeVec(seed) {
+  const v = [];
+  for (let i = 0; i < 6; i++) v.push(((Math.sin(seed*7+i*3.14)+1)/2).toFixed(2));
+  return '[' + v.join(', ') + '...]';
+}
+
+// ── Build step sidebar ──
+function buildSteps(prefix, names) {
+  const wrap = document.getElementById(prefix+'-steps');
+  wrap.innerHTML = '';
+  names.forEach((name, i) => {
+    const d = document.createElement('div');
+    d.className = 'step-item'; d.id = prefix+'-si'+(i+1);
+    d.innerHTML = `<div class="step-num">${i+1}</div><div class="step-name">${name}</div>`;
+    wrap.appendChild(d);
+  });
+}
+function updateSteps(prefix, n, total) {
+  for (let i = 1; i <= total; i++) {
+    const el = document.getElementById(prefix+'-si'+i);
+    if (!el) continue;
+    el.className = 'step-item' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+function setExp(prefix, html) {
+  document.getElementById(prefix+'-exp').innerHTML = html;
+}
+function setHint(prefix, text) {
+  document.getElementById(prefix+'-hint').textContent = text;
+}
+function showNextBtn(prefix, show) {
+  document.getElementById(prefix+'-nbtn').style.display = show ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════
+// TRADITIONAL RAG
+// ══════════════════════════════════════════
+const tChunks = [
+  'Annual leave entitlement is 21 days per calendar year for all full-time employees.',
+  'Medical leave requires a doctor\'s certificate for absences exceeding 2 consecutive days.',
+  'Remote work is permitted up to 3 days per week subject to manager approval.',
+  'Performance reviews are conducted bi-annually in June and December.',
+  'Employees are eligible for a training budget of $1,500 per year for professional development.',
+  'Resignation notice period is 1 month for staff and 3 months for managers.',
+];
+const tAnswers = {
+  'work from home':{ winner:2, scores:[12,8,94,11,6,9], vec:'[0.82, 0.31, 0.74, 0.19, 0.55, 0.63...]', ans:'Yes — remote work is permitted up to 3 days per week, subject to your manager\'s approval.' },
+  'home':          { winner:2, scores:[12,8,94,11,6,9], vec:'[0.82, 0.31, 0.74, 0.19, 0.55, 0.63...]', ans:'Yes — remote work is permitted up to 3 days per week, subject to your manager\'s approval.' },
+  'annual leave':  { winner:0, scores:[96,7,11,5,9,8],  vec:'[0.91, 0.44, 0.12, 0.67, 0.23, 0.38...]', ans:'You are entitled to 21 days of annual leave per calendar year.' },
+  'leave':         { winner:0, scores:[96,7,11,5,9,8],  vec:'[0.91, 0.44, 0.12, 0.67, 0.23, 0.38...]', ans:'You are entitled to 21 days of annual leave per calendar year.' },
+  'notice':        { winner:5, scores:[9,6,7,8,5,93],   vec:'[0.14, 0.22, 0.08, 0.31, 0.17, 0.92...]', ans:'The notice period is 1 month for staff-level employees and 3 months for managers.' },
+  'resign':        { winner:5, scores:[9,6,7,8,5,93],   vec:'[0.14, 0.22, 0.08, 0.31, 0.17, 0.92...]', ans:'The notice period is 1 month for staff-level employees and 3 months for managers.' },
+  'training':      { winner:4, scores:[7,6,8,11,92,9],  vec:'[0.11, 0.09, 0.14, 0.17, 0.88, 0.12...]', ans:'You are eligible for a training budget of $1,500 per year for professional development.' },
+  'medical':       { winner:1, scores:[8,91,6,7,5,9],   vec:'[0.08, 0.89, 0.13, 0.22, 0.11, 0.07...]', ans:'Medical leave requires a doctor\'s certificate if absent for more than 2 consecutive days.' },
+  'performance':   { winner:3, scores:[6,5,7,94,8,7],   vec:'[0.12, 0.08, 0.09, 0.91, 0.14, 0.11...]', ans:'Performance reviews are conducted bi-annually in June and December.' },
+};
+function tMatchQ(q) {
+  q = q.toLowerCase();
+  for (const k of Object.keys(tAnswers)) { if (q.includes(k)) return tAnswers[k]; }
+  return { winner:2, scores:[18,12,71,14,9,11], vec:'[0.42, 0.31, 0.64, 0.29, 0.45, 0.43...]', ans:'Based on the HR policy, please check with your HR representative for more details.' };
+}
+let tStep=0, tData=null, tQ='';
+const T=5, tNames=['Chunk documents','Embed to vectors','Similarity search','Retrieve best chunk','Generate answer'];
+
+function tSetPill(el,q){document.querySelectorAll('#ch1 .query-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); document.getElementById('t-qinput').value=q;}
+function tNext(){if(tStep<T)tShowStep(tStep+1);}
+function tRestart(){tStep=0; document.getElementById('t-controls').style.display='none'; msbHide(); document.getElementById('t-qinput').value=''; document.querySelectorAll('#ch1 .query-pill').forEach(p=>p.classList.remove('active')); document.getElementById('t-canvas').innerHTML='<div class="canvas-empty" id="t-empty"><div class="canvas-empty-icon">🔍</div><div class="canvas-empty-text">Select a question and click Start</div></div>';}
+function tStart(){
+  tQ=document.getElementById('t-qinput').value.trim(); if(!tQ)return;
+  tData=tMatchQ(tQ); tStep=0;
+  buildSteps('t',tNames);
+  document.getElementById('t-controls').style.display='block';
+  scrollToCanvas('t-canvas');
+  setTimeout(()=>tShowStep(1),300);
+}
+async function tShowStep(n){
+  tStep=n; scrollToCanvas('t-canvas'); updateSteps('t',n,T); showNextBtn('t',false);
+  if(n===1) await tRenderChunk();
+  if(n===2) await tRenderEmbed();
+  if(n===3) await tRenderSim();
+  if(n===4) await tRenderRetrieve();
+  if(n===5) await tRenderAnswer();
+  if(n<T){ showNextBtn('t',true); setHint('t','Take your time. Click when ready.'); }
+  else{ showNextBtn('t',false); setHint('t','✓ Complete — you\'ve seen the full Traditional RAG process.'); }
+  msbUpdate('t', n);
+}
+async function tRenderChunk(){
+  setExp('t','The HR policy document is split into small <strong>chunks</strong> — each holding one idea. This makes it possible to find the specific piece that answers your question.');
+  const c=document.getElementById('t-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Document chunks</div><div class="chunk-list" id="t-cl"></div></div>`;
+  for(let i=0;i<tChunks.length;i++){
+    const d=document.createElement('div'); d.className='chunk-row';
+    d.innerHTML=`<span class="chunk-tag" style="background:#e8f3fc;border:1px solid #4a90c4;color:#4a90c4">Chunk ${i+1}</span><span>${tChunks[i]}</span>`;
+    document.getElementById('t-cl').appendChild(d);
+    await delay(100); d.classList.add('in'); await delay(180);
+  }
+}
+async function tRenderEmbed(){
+  setExp('t','Both your query and each chunk are converted into <strong>vectors</strong> — lists of numbers capturing meaning mathematically. Similar topics get similar numbers.');
+  const c=document.getElementById('t-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Text → Vector embedding</div><div class="embed-list" id="t-el"></div><p style="font-size:0.72rem;color:#aaa;margin-top:0.8rem;font-style:italic;" id="t-en"></p></div>`;
+  const rows=[
+    {src:`<strong>Your query:</strong> "${tQ}"`,vec:tData.vec,col:'#e8f3fc',bcol:'#4a90c4'},
+    {src:`Chunk ${tData.winner+1} (closest match)`,vec:fakeVec(tData.winner),col:'#e8f3fc',bcol:'#4a90c4'},
+    {src:`Chunk 1 (low match)`,vec:fakeVec(0),col:'#f5f5f5',bcol:'#cccccc'},
+  ];
+  for(const r of rows){
+    const d=document.createElement('div'); d.className='embed-pair';
+    d.innerHTML=`<div class="embed-src">${r.src}</div><div class="embed-arrow">→</div><div class="embed-vec" style="color:${r.bcol};background:${r.col};border-color:${r.bcol}">${r.vec}</div>`;
+    document.getElementById('t-el').appendChild(d); await delay(300); d.classList.add('in'); await delay(500);
+  }
+  document.getElementById('t-en').textContent=`All ${tChunks.length} chunks embedded. Now comparing your query vector against each…`;
+}
+async function tRenderSim(){
+  setExp('t','Each chunk vector is compared to your query vector, producing a <strong>similarity score</strong>. The highest score wins — this is how AI finds meaning, not just exact words.');
+  const c=document.getElementById('t-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Cosine similarity scores</div><div class="sim-list" id="t-sl"></div></div>`;
+  const order=tChunks.map((_,i)=>i).filter(i=>i!==tData.winner); order.push(tData.winner);
+  for(const ci of order){
+    const score=tData.scores[ci]; const isW=ci===tData.winner;
+    const d=document.createElement('div'); d.className='sim-row'+(isW?' winner':'');
+    d.innerHTML=`<div class="sim-txt">Chunk ${ci+1}: "${tChunks[ci].substring(0,52)}…"</div><div class="sim-bar"><div class="sim-fill" id="t-sf${ci}"></div></div><div class="sim-pct" id="t-sp${ci}">0%</div>`;
+    document.getElementById('t-sl').appendChild(d); await delay(isW?400:220); d.classList.add('in'); await delay(80);
+    let v=0; const iv=setInterval(()=>{ v=Math.min(v+3,score); const f=document.getElementById('t-sf'+ci); const p=document.getElementById('t-sp'+ci); if(f)f.style.width=v+'%'; if(p)p.textContent=v+'%'; if(v>=score)clearInterval(iv); },16);
+    await delay(isW?900:320);
+  }
+}
+async function tRenderRetrieve(){
+  setExp('t',`Chunk ${tData.winner+1} scored <strong>${tData.scores[tData.winner]}%</strong> — the highest match. It's retrieved and passed to the AI as context.`);
+  const c=document.getElementById('t-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="retrieved"><div class="ret-badge">Retrieved — ${tData.scores[tData.winner]}% · Chunk ${tData.winner+1}</div><div class="ret-body">"${tChunks[tData.winner]}"</div></div><p class="ret-note">↑ This is the only chunk the AI sees. It becomes the full context for generating your answer.</p></div>`;
+}
+async function tRenderAnswer(){
+  setExp('t','The AI reads the retrieved chunk as context and generates a <strong>precise, grounded answer</strong> — not from general knowledge, but from what was retrieved.');
+  const c=document.getElementById('t-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="answer-box" id="t-ans"></div><div class="answer-meta">Source: <span>Chunk ${tData.winner+1}</span> · HR Policy · Similarity: <span>${tData.scores[tData.winner]}%</span></div></div>`;
+  await delay(300); typewrite(document.getElementById('t-ans'),tData.ans,26);
+}
+
+// ══════════════════════════════════════════
+// VECTORLESS RAG
+// ══════════════════════════════════════════
+const vClauses=[
+  {id:'C4.1',text:'Data Retention: All personal data shall be retained for no longer than 36 months from the date of collection unless otherwise required by law.',keywords:['data','retention','personal','months']},
+  {id:'C7.3',text:'Liability Cap: The total aggregate liability of either party shall not exceed the total fees paid in the 12 months preceding the claim.',keywords:['liability','fees','aggregate','claim']},
+  {id:'C9.1',text:'Termination for Convenience: Either party may terminate this agreement with 90 days written notice without cause.',keywords:['termination','terminate','notice','days']},
+  {id:'C11.2',text:'Intellectual Property: All work product created under this agreement shall be the exclusive property of the Client upon full payment.',keywords:['intellectual','property','work','product','exclusive']},
+  {id:'C13.4',text:'Confidentiality: Both parties agree to maintain strict confidentiality of all proprietary information for a period of 5 years post-termination.',keywords:['confidentiality','proprietary','information','years']},
+];
+const vDB={
+  'data retention':{expanded:'personal data retention duration months collection',terms:['data','retention','personal','months'],winner:0,scores:[{hits:4,pct:92},{hits:1,pct:8},{hits:0,pct:0},{hits:0,pct:2},{hits:0,pct:0}],ans:'All personal data must be retained for no longer than 36 months from the date of collection, unless otherwise required by applicable law.'},
+  'termination':{expanded:'termination terminate agreement notice days written convenience',terms:['termination','terminate','notice','days'],winner:2,scores:[{hits:0,pct:0},{hits:0,pct:0},{hits:4,pct:89},{hits:0,pct:0},{hits:1,pct:18}],ans:'Either party may terminate this agreement with 90 days written notice, without needing to state a reason or cause.'},
+  'intellectual property':{expanded:'intellectual property work product ownership exclusive client rights',terms:['intellectual','property','work','product','exclusive'],winner:3,scores:[{hits:0,pct:0},{hits:0,pct:0},{hits:0,pct:0},{hits:5,pct:95},{hits:0,pct:4}],ans:'All work product created under this agreement is the exclusive property of the Client upon full payment.'},
+  'confidentiality':{expanded:'confidentiality proprietary information parties years post-termination strict',terms:['confidentiality','proprietary','information','years'],winner:4,scores:[{hits:0,pct:0},{hits:0,pct:0},{hits:0,pct:0},{hits:0,pct:0},{hits:4,pct:91}],ans:'Both parties must maintain strict confidentiality of all proprietary information for a period of 5 years following termination of the agreement.'},
+};
+function vMatchQ(q){ q=q.toLowerCase(); for(const k of Object.keys(vDB)){if(q.includes(k))return vDB[k];} return{expanded:q,terms:q.split(' ').slice(0,3),winner:0,scores:[{hits:1,pct:45},{hits:0,pct:0},{hits:0,pct:0},{hits:0,pct:0},{hits:0,pct:0}],ans:'Based on the contract, please consult your legal team for a precise interpretation.'}; }
+let vStep=0,vData=null,vQ='';
+const V=5, vNames=['Build keyword index','LLM query expansion','BM25 scoring','Retrieve clause','Generate answer'];
+
+function vSetPill(el,q){document.querySelectorAll('#ch2 .query-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); document.getElementById('v-qinput').value=q;}
+function vNext(){if(vStep<V)vShowStep(vStep+1);}
+function vRestart(){vStep=0; document.getElementById('v-controls').style.display='none'; msbHide(); document.getElementById('v-qinput').value=''; document.querySelectorAll('#ch2 .query-pill').forEach(p=>p.classList.remove('active')); document.getElementById('v-canvas').innerHTML='<div class="canvas-empty" id="v-empty"><div class="canvas-empty-icon">📋</div><div class="canvas-empty-text">Select a clause and click Start</div></div>';}
+function vStart(){
+  vQ=document.getElementById('v-qinput').value.trim(); if(!vQ)return;
+  vData=vMatchQ(vQ); vStep=0;
+  buildSteps('v',vNames);
+  document.getElementById('v-controls').style.display='block';
+  scrollToCanvas('v-canvas');
+  setTimeout(()=>vShowStep(1),300);
+}
+async function vShowStep(n){
+  vStep=n; scrollToCanvas('v-canvas'); updateSteps('v',n,V); showNextBtn('v',false);
+  if(n===1) await vRenderIndex();
+  if(n===2) await vRenderExpand();
+  if(n===3) await vRenderBM25();
+  if(n===4) await vRenderRetrieve();
+  if(n===5) await vRenderAnswer();
+  if(n<V){ showNextBtn('v',true); setHint('v','Take your time. Click when ready.'); }
+  else{ showNextBtn('v',false); setHint('v','✓ Complete — you\'ve seen the full Vectorless RAG process.'); }
+  msbUpdate('v', n);
+}
+async function vRenderIndex(){
+  setExp('v','Documents are <strong>not split into chunks</strong>. Each clause stays whole and is indexed by its keywords — like the index at the back of a textbook. No embeddings. Pure text.');
+  const c=document.getElementById('v-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Keyword index — full clauses stored intact</div><div class="idx-list" id="v-it"></div></div>`;
+  for(let i=0;i<vClauses.length;i++){
+    const cl=vClauses[i]; let hl=cl.text;
+    cl.keywords.forEach(k=>{ hl=hl.replace(new RegExp('\\b'+k+'\\b','gi'),`<span class="idx-kw" style="color:#e8a838">${k}</span>`); });
+    const d=document.createElement('div'); d.className='idx-row';
+    d.innerHTML=`<span class="chunk-tag" style="background:#fff8ea;border:1px solid #e8a838;color:#e8a838">${cl.id}</span><span>${hl}</span>`;
+    document.getElementById('v-it').appendChild(d); await delay(150); d.classList.add('in'); await delay(200);
+  }
+}
+async function vRenderExpand(){
+  setExp('v','An <strong>LLM rewrites your casual query</strong> into precise legal terminology before searching — handling synonyms and casual phrasing. Then stopwords are removed.');
+  const c=document.getElementById('v-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">LLM query expansion</div><div class="expand-flow" id="v-ew"></div></div>`;
+  const steps=[
+    {label:'Your original query',content:`<div class="expand-box">"${vQ}"</div>`},
+    {label:null,content:`<div class="expand-divider">🤖 LLM rewrites to precise legal terminology</div>`},
+    {label:'LLM expanded query',content:`<div class="expand-box highlighted" id="v-exp-txt"></div>`},
+    {label:null,content:`<div class="expand-divider">✂ Stopword removal</div>`},
+    {label:'Final search terms → BM25',content:`<div class="kw-cloud" id="v-kwt"></div>`},
+  ];
+  for(const s of steps){
+    const d=document.createElement('div'); d.className='expand-step';
+    d.innerHTML=(s.label?`<div class="expand-lbl">${s.label}</div>`:'')+s.content;
+    document.getElementById('v-ew').appendChild(d); await delay(200); d.classList.add('in'); await delay(350);
+    if(s.content.includes('v-exp-txt')){ typewrite(document.getElementById('v-exp-txt'),vData.expanded,28); await delay(vData.expanded.length*28+400); }
+    if(s.content.includes('v-kwt')){
+      const tb=document.getElementById('v-kwt');
+      for(const t of vData.terms){ const tag=document.createElement('span'); tag.className='kw-pill'; tag.style.cssText='border-color:#e8a838;color:#e8a838;background:#fff8ea'; tag.textContent=t; tb.appendChild(tag); await delay(180); tag.classList.add('in'); await delay(150); }
+    }
+  }
+}
+async function vRenderBM25(){
+  setExp('v','BM25 scores each clause by counting <strong>how many search terms appear</strong> in it, weighting rarer words higher. No vectors — pure text mathematics.');
+  const c=document.getElementById('v-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">BM25 scoring — all clauses ranked</div><div class="bm25-list" id="v-bw"></div></div>`;
+  const order=vClauses.map((_,i)=>i).filter(i=>i!==vData.winner); order.push(vData.winner);
+  for(const ci of order){
+    const cl=vClauses[ci]; const s=vData.scores[ci]; const isW=ci===vData.winner;
+    const hits=vData.terms.map(t=>({term:t,hit:cl.text.toLowerCase().includes(t)}));
+    const d=document.createElement('div'); d.className='bm25-row'+(isW?' winner':'');
+    d.innerHTML=`<div class="bm25-head"><div class="bm25-clause">${cl.id}: "${cl.text.substring(0,58)}…"</div><div class="bm25-score">BM25: <strong id="v-bs${ci}">0</strong></div></div><div class="bm25-hits">${hits.map(h=>`<span class="ht ${h.hit?'match':'miss'}">${h.term}</span>`).join('')}</div><div class="bm25-bar-outer"><div class="bm25-bar-fill" id="v-bf${ci}"></div></div>`;
+    document.getElementById('v-bw').appendChild(d); await delay(isW?450:260); d.classList.add('in'); await delay(80);
+    let v=0; const iv=setInterval(()=>{ v=Math.min(v+2,s.pct); const f=document.getElementById('v-bf'+ci); const sc=document.getElementById('v-bs'+ci); if(f)f.style.width=v+'%'; if(sc)sc.textContent=(v/100*s.hits*3.2).toFixed(1); if(v>=s.pct)clearInterval(iv); },16);
+    await delay(isW?900:380);
+  }
+}
+async function vRenderRetrieve(){
+  const cl=vClauses[vData.winner]; const s=vData.scores[vData.winner];
+  setExp('v',`<strong>${cl.id}</strong> scored highest — all ${s.hits} keywords found. Notice the exact matched words — <strong>no semantic drift</strong>. This is why Vectorless RAG is used for legal text.`);
+  let hl=cl.text;
+  vData.terms.forEach(t=>{ hl=hl.replace(new RegExp('\\b'+t+'\\b','gi'),`<span class="kw" style="font-weight:700;color:#e8a838">${t}</span>`); });
+  const c=document.getElementById('v-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="retrieved" style="border-left-color:#e8a838"><div class="ret-badge" style="color:#e8a838">${cl.id} — ${s.hits} keywords matched</div><div class="ret-body">"${hl}"</div></div><div class="vs-note"><strong>vs Traditional RAG:</strong> Traditional finds this by meaning. Vectorless found it because the exact words appear in it. For legal text, that distinction matters critically.</div></div>`;
+}
+async function vRenderAnswer(){
+  setExp('v','The AI reads the exact retrieved clause and generates a <strong>legally precise, grounded answer</strong>. Every word traceable to the source.');
+  const c=document.getElementById('v-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="answer-box" id="v-ans" style="border-left-color:#e8a838"></div><div class="answer-meta">Source: <span>${vClauses[vData.winner].id}</span> · Keywords matched: <span>${vData.scores[vData.winner].hits}/${vData.terms.length}</span></div></div>`;
+  await delay(300); typewrite(document.getElementById('v-ans'),vData.ans,22);
+}
+
+// ══════════════════════════════════════════
+// GRAPH RAG
+// ══════════════════════════════════════════
+const gRawDoc=[
+  {text:'Alpha Corp is a registered holding company that owns ShellCo Ltd, a subsidiary flagged by regulators as a risk entity.',entities:['Alpha Corp','ShellCo Ltd'],rels:['owns','flagged as']},
+  {text:'James Wong serves as director of both Alpha Corp and Beta Holdings, creating a dual-directorship structure.',entities:['James Wong','Alpha Corp','Beta Holdings'],rels:['director of']},
+  {text:'Beta Holdings is linked to a sanctioned entity through a series of offshore transactions.',entities:['Beta Holdings','Sanctioned Entity'],rels:['linked to']},
+  {text:'Account #4872-SG, operated under James Wong, has recorded multiple transfers to Cayman Fund X, an offshore vehicle under investigation.',entities:['Account #4872-SG','James Wong','Cayman Fund X'],rels:['operated by','transfers to']},
+];
+const gQDB={
+  alpha:{text:'Is Alpha Corp linked to any risk entities?',startEntity:'Alpha Corp',intent:'risk connections',traversal:[{hop:'Hop 1',from:'Alpha Corp',rel:'→ owns →',to:'ShellCo Ltd',toStyle:'color:#e8a838',flag:'Subsidiary',flagClass:'caution'},{hop:'Hop 2',from:'ShellCo Ltd',rel:'→ flagged as →',to:'⚠ Risk Entity',toStyle:'color:#e05050;font-weight:700',flag:'FLAGGED',flagClass:'danger'},{hop:'Hop 3',from:'Alpha Corp',rel:'→ director →',to:'James Wong',toStyle:'color:#4caf7d;font-weight:700',flag:'Dual Director',flagClass:'caution'},{hop:'Hop 4',from:'James Wong',rel:'→ also directs →',to:'Beta Holdings',toStyle:'color:#e8a838',flag:'Connected',flagClass:'caution'},{hop:'Hop 5',from:'Beta Holdings',rel:'→ linked to →',to:'🚫 Sanctioned Entity',toStyle:'color:#e05050;font-weight:700',flag:'HIGH RISK',flagClass:'danger'}],subgraphNodes:['Alpha Corp','ShellCo Ltd','⚠ Risk Entity','James Wong','Beta Holdings','🚫 Sanctioned Entity'],subgraphEdges:['owns','flagged as','director','also directs','linked to'],ans:'Yes — Alpha Corp is indirectly connected to two risk entities. It owns ShellCo Ltd (flagged by regulators), and through director James Wong, it is connected to Beta Holdings which is linked to a sanctioned entity.'},
+  director:{text:'Who is James Wong connected to?',startEntity:'James Wong',intent:'connections & roles',traversal:[{hop:'Hop 1',from:'James Wong',rel:'→ director of →',to:'Alpha Corp',toStyle:'color:#4a90c4;font-weight:700',flag:'Holding Co.',flagClass:'caution'},{hop:'Hop 2',from:'James Wong',rel:'→ director of →',to:'Beta Holdings',toStyle:'color:#4a90c4;font-weight:700',flag:'Dual Role',flagClass:'caution'},{hop:'Hop 3',from:'James Wong',rel:'→ operates →',to:'Account #4872-SG',toStyle:'color:#9b6fc4;font-weight:700',flag:'Monitored',flagClass:'caution'},{hop:'Hop 4',from:'Account #4872-SG',rel:'→ transfers to →',to:'Cayman Fund X',toStyle:'color:#e05050;font-weight:700',flag:'UNDER INVESTIGATION',flagClass:'danger'},{hop:'Hop 5',from:'Beta Holdings',rel:'→ linked to →',to:'🚫 Sanctioned Entity',toStyle:'color:#e05050;font-weight:700',flag:'HIGH RISK',flagClass:'danger'}],subgraphNodes:['James Wong','Alpha Corp','Beta Holdings','Account #4872-SG','Cayman Fund X','🚫 Sanctioned Entity'],subgraphEdges:['director of','director of','operates','transfers to','linked to'],ans:'James Wong holds directorships in both Alpha Corp and Beta Holdings. He also operates Account #4872-SG, which has transferred funds to Cayman Fund X (under investigation). His connection to Beta Holdings further links him to a sanctioned entity.'},
+  transfers:{text:'What accounts are involved in suspicious transfers?',startEntity:'Account #4872-SG',intent:'suspicious transactions',traversal:[{hop:'Hop 1',from:'Account #4872-SG',rel:'→ operated by →',to:'James Wong',toStyle:'color:#4caf7d;font-weight:700',flag:'Director',flagClass:'caution'},{hop:'Hop 2',from:'Account #4872-SG',rel:'→ transfers to →',to:'Cayman Fund X',toStyle:'color:#e05050;font-weight:700',flag:'UNDER INVESTIGATION',flagClass:'danger'},{hop:'Hop 3',from:'James Wong',rel:'→ director of →',to:'Alpha Corp',toStyle:'color:#4a90c4',flag:'Connected',flagClass:'caution'},{hop:'Hop 4',from:'James Wong',rel:'→ director of →',to:'Beta Holdings',toStyle:'color:#4a90c4',flag:'Connected',flagClass:'caution'},{hop:'Hop 5',from:'Beta Holdings',rel:'→ linked to →',to:'🚫 Sanctioned Entity',toStyle:'color:#e05050;font-weight:700',flag:'HIGH RISK',flagClass:'danger'}],subgraphNodes:['Account #4872-SG','James Wong','Cayman Fund X','Alpha Corp','Beta Holdings','🚫 Sanctioned Entity'],subgraphEdges:['operated by','transfers to','director of','director of','linked to'],ans:'Account #4872-SG is the primary account flagged for suspicious transfers. It is operated by James Wong and has transferred funds to Cayman Fund X, an offshore vehicle under investigation. This account connects to Alpha Corp and Beta Holdings through James Wong\'s directorship roles.'},
+};
+let gStep=0,gData=null,gKey=null;
+const G=6, gNames=['Read document','Build graph','Extract entity','Traverse hops','Extract sub-graph','Generate answer'];
+
+function gSetPill(el,key){document.querySelectorAll('#ch3 .query-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); gKey=key; document.getElementById('g-qinput').value=gQDB[key].text;}
+function gNext(){if(gStep<G)gShowStep(gStep+1);}
+function gRestart(){gStep=0;gKey=null; document.getElementById('g-controls').style.display='none'; msbHide(); document.getElementById('g-qinput').value=''; document.querySelectorAll('#ch3 .query-pill').forEach(p=>p.classList.remove('active')); document.getElementById('g-canvas').innerHTML='<div class="canvas-empty" id="g-empty"><div class="canvas-empty-icon">🕸</div><div class="canvas-empty-text">Select a query and click Start</div></div>';}
+function gStart(){
+  if(!gKey){alert('Please select a query above.'); return;}
+  gData=gQDB[gKey]; gStep=0;
+  buildSteps('g',gNames);
+  document.getElementById('g-controls').style.display='block';
+  scrollToCanvas('g-canvas');
+  setTimeout(()=>gShowStep(1),300);
+}
+async function gShowStep(n){
+  gStep=n; scrollToCanvas('g-canvas'); updateSteps('g',n,G); showNextBtn('g',false);
+  if(n===1) await gRenderDoc();
+  if(n===2) await gRenderGraph();
+  if(n===3) await gRenderEntity();
+  if(n===4) await gRenderTraversal();
+  if(n===5) await gRenderSubgraph();
+  if(n===6) await gRenderAnswer();
+  if(n<G){ showNextBtn('g',true); setHint('g','Take your time. Click when ready.'); }
+  else{ showNextBtn('g',false); setHint('g','✓ Complete — you\'ve seen the full Graph RAG process.'); }
+  msbUpdate('g', n);
+}
+async function gRenderDoc(){
+  setExp('g','Instead of chunking, an LLM reads the document to extract <strong>entities</strong> (companies, people) and <strong>relationships</strong> (owns, directs, transfers to).');
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Entity & relationship extraction</div><div class="doc-list" id="g-dw"></div></div>`;
+  for(const sent of gRawDoc){
+    let hl=sent.text;
+    sent.entities.forEach(e=>{ hl=hl.replace(new RegExp(e.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),`<span class="ent" style="color:#4caf7d">${e}</span>`); });
+    sent.rels.forEach(r=>{ hl=hl.replace(new RegExp('\\b'+r+'\\b','gi'),`<span class="rel" style="color:#e8a838">${r}</span>`); });
+    const d=document.createElement('div'); d.className='doc-sent'; d.innerHTML=hl;
+    document.getElementById('g-dw').appendChild(d); await delay(200); d.classList.add('in'); await delay(400);
+    const ext=document.createElement('div'); ext.className='extract-row';
+    ext.innerHTML=sent.entities.map(e=>`<span class="ext-e" style="border-color:#4caf7d;color:#4caf7d;background:#f0faf5">📍 ${e}</span>`).join('')+sent.rels.map(r=>`<span class="ext-r" style="border-color:#e8a838;color:#e8a838;background:#fff8ea">↔ ${r}</span>`).join('');
+    document.getElementById('g-dw').appendChild(ext); await delay(150); ext.classList.add('in'); await delay(350);
+  }
+}
+async function gRenderGraph(){
+  setExp('g','Entities become <strong>nodes</strong>, relationships become <strong>edges</strong>. The result is a knowledge graph — not text, not an index, but a <strong>network of connected entities</strong>.');
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Knowledge graph</div><div class="graph-vis"><div class="graph-legend"><div class="legend-item"><div class="legend-dot" style="background:#4a90c4"></div>Company</div><div class="legend-item"><div class="legend-dot" style="background:#4caf7d"></div>Person</div><div class="legend-item"><div class="legend-dot" style="background:#e05050"></div>Risk</div><div class="legend-item"><div class="legend-dot" style="background:#9b6fc4"></div>Account</div></div><div class="graph-row" id="g-r1"></div><div class="graph-row" id="g-r2"></div><div class="graph-row" id="g-r3"></div></div></div>`;
+  const rows=[
+    [{t:'Alpha Corp',c:'#4a90c4'},{e:'— owns →'},{t:'ShellCo Ltd',c:'#4a90c4'},{e:'— flagged as →'},{t:'⚠ Risk Entity',c:'#e05050'}],
+    [{t:'James Wong',c:'#4caf7d'},{e:'— director of →'},{t:'Alpha Corp',c:'#4a90c4'},{e:'| also →'},{t:'Beta Holdings',c:'#4a90c4'},{e:'— linked to →'},{t:'🚫 Sanctioned',c:'#e05050'}],
+    [{t:'Account #4872-SG',c:'#9b6fc4'},{e:'— operated by James Wong | transfers to →'},{t:'Cayman Fund X',c:'#e05050'}],
+  ];
+  for(let ri=0;ri<rows.length;ri++){
+    const row=document.getElementById('g-r'+(ri+1));
+    for(const item of rows[ri]){
+      const el=document.createElement('div');
+      if(item.e){ el.className='gedge'; el.textContent=item.e; }
+      else{ el.className='gnode'; el.style.cssText=`border-color:${item.c};color:${item.c}`; el.textContent=item.t; }
+      row.appendChild(el); await delay(120); el.classList.add('in'); await delay(160);
+    }
+    await delay(200);
+  }
+}
+async function gRenderEntity(){
+  setExp('g','The query is parsed to find the <strong>starting entity</strong> and <strong>intent</strong>. The traversal begins from a specific node — no text search, no vector lookup.');
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Query entity extraction</div><div class="ee-list" id="g-ee"></div></div>`;
+  const steps=[
+    {label:'Query',content:`"${gData.text}"`},
+    {label:'Starting node identified',content:`📍 <span style="color:#4caf7d;font-weight:700">${gData.startEntity}</span> — traversal begins here`},
+    {label:'Intent identified',content:`🎯 Looking for: <span style="color:#4a90c4;font-style:italic">${gData.intent}</span>`},
+    {label:'Plan',content:`Follow edges from <span style="font-weight:700">${gData.startEntity}</span> related to <em>${gData.intent}</em>. No text search. Pure graph navigation.`},
+  ];
+  for(const s of steps){
+    const d=document.createElement('div'); d.className='ee-card';
+    d.innerHTML=`<div class="ee-lbl">${s.label}</div>${s.content}`;
+    document.getElementById('g-ee').appendChild(d); await delay(300); d.classList.add('in'); await delay(550);
+  }
+}
+async function gRenderTraversal(){
+  setExp('g',`Starting from <strong>${gData.startEntity}</strong>, the system follows edges <strong>hop by hop</strong> — like tracing a trail on a map. Text search simply cannot do this.`);
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Graph traversal — hop by hop</div><p style="font-size:0.72rem;color:#aaa;margin-bottom:0.6rem">Starting from: <span style="font-weight:700;color:#4caf7d">${gData.startEntity}</span></p><div class="trav-list" id="g-tw"></div></div>`;
+  for(const hop of gData.traversal){
+    const d=document.createElement('div'); d.className='trav-row';
+    d.innerHTML=`<span class="trav-hop">${hop.hop}</span><span class="trav-from" style="color:#4caf7d">${hop.from}</span><span class="trav-rel">${hop.rel}</span><span style="${hop.toStyle}">${hop.to}</span><span class="trav-flag ${hop.flagClass}">${hop.flag}</span>`;
+    document.getElementById('g-tw').appendChild(d); await delay(300); d.classList.add('in'); await delay(800);
+  }
+}
+async function gRenderSubgraph(){
+  setExp('g','The traversal is complete. The connected nodes and edges form a <strong>sub-graph</strong> — this is sent to the AI as context. Not a text chunk. A structured relationship map.');
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="subgraph-box" style="border-color:#4caf7d"><div class="sg-label" style="background:#4caf7d">Extracted Sub-graph</div><div class="sg-nodes"><span class="sg-rl">Nodes:</span>${gData.subgraphNodes.map(n=>`<span class="sg-n" style="border-color:#4caf7d;color:#4caf7d;background:#f0faf5">${n}</span>`).join('')}</div><div class="sg-edges"><span class="sg-rl">Edges:</span>${gData.subgraphEdges.map(e=>`<span class="sg-e" style="border-color:#e8a838;color:#e8a838;background:#fff8ea">→ ${e}</span>`).join('')}</div></div><p class="ret-note">↑ Unlike Traditional RAG (text chunk) or Vectorless (clause), Graph RAG sends a structured relationship map to the AI.</p></div>`;
+}
+async function gRenderAnswer(){
+  setExp('g','The AI reads the sub-graph and generates a <strong>relationship-aware answer</strong>. Every claim is traceable to a specific node or edge.');
+  const c=document.getElementById('g-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="answer-box" id="g-ans" style="border-left-color:#4caf7d"></div><div class="answer-meta">Nodes traversed: <span>${gData.subgraphNodes.length}</span> · Relationships traced: <span>${gData.subgraphEdges.length}</span></div></div>`;
+  await delay(300); typewrite(document.getElementById('g-ans'),gData.ans,20);
+}
+
+// ══════════════════════════════════════════
+// AGENTIC RAG
+// ══════════════════════════════════════════
+const aQDB={
+  risk:{text:'What are the key risks in our Q3 report vs industry benchmarks?',complexity:'High — requires internal document retrieval + external benchmark data + risk analysis',subqueries:[{num:'SQ-1',tool:'Vector Search',q:'Q3 financial report highlights and key metrics',result:'Q3 revenue: $4.2M (+8% YoY). Operational costs: $3.1M (+21% YoY). APAC provisioning up 34%.',status:'ok',conf:88},{num:'SQ-2',tool:'API Call',q:'Industry benchmark data for operational cost ratios',result:'Industry median cost ratio: 61%. Top quartile: 54%. Our ratio: 73.8%.',status:'ok',conf:91},{num:'SQ-3',tool:'Vector Search',q:'Risk flags and variance indicators from Q3 commentary',result:'FX exposure flagged. Provisioning increase unexplained. No mitigation plan.',status:'weak',conf:42}],memory:[{type:'k',icon:'✓',text:'Cost ratio (73.8%) significantly exceeds industry median (61%)'},{type:'k',icon:'✓',text:'APAC provisioning increase (34%) is an outlier'},{type:'g',icon:'✗',text:'FX exposure not quantified — SQ-3 confidence too low'},{type:'g',icon:'✗',text:'Risk mitigation plan details missing'}],retryLogs:[{icon:'⚠',text:'SQ-3 confidence: 42% — below threshold (70%)',cls:'retry'},{icon:'↺',text:'Refining: expanding scope for risk commentary…',cls:'action'},{icon:'🔍',text:'Re-executing: "Q3 risk flags FX exposure mitigation plan"',cls:'info'},{icon:'📄',text:'New result: FX exposure $180K. No formal mitigation plan documented.',cls:'info'},{icon:'✓',text:'Retry confidence: 84% — threshold passed.',cls:'success'}],synthesis:[{badge:'sq',label:'SQ-1',text:'Financials: revenue +8% but costs +21%. Cost ratio 73.8% vs 61% median.'},{badge:'sq',label:'SQ-2',text:'Benchmark: top quartile at 54%. We are 19.8 points above median.'},{badge:'retry',label:'SQ-3 (retried)',text:'FX exposure: $180K unhedged. APAC provisioning +34% undocumented. No mitigation plan.'}],sources:['Q3 Financial Report','Industry Benchmark API','Q3 Risk Commentary'],ans:'Q3 presents three material risk flags. Operational costs grew 2.6× faster than revenue, pushing the cost ratio to 73.8% — nearly 13 points above the industry median. The APAC segment shows a 34% provisioning increase with no documented rationale. FX exposure of $180K remains unhedged with no formal mitigation plan on file.'},
+  market:{text:'Summarise competitor pricing and recommend our positioning.',complexity:'High — requires competitor retrieval + internal pricing data + strategic synthesis',subqueries:[{num:'SQ-1',tool:'Web Search',q:'Competitor A current pricing tiers',result:'Competitor A: $29/mo entry, $79/mo pro, $199/mo enterprise. Entry tier has limited integrations.',status:'ok',conf:85},{num:'SQ-2',tool:'Web Search',q:'Competitor B pricing and positioning',result:'Competitor B: enterprise-only, ACV $24K+. No self-serve tier.',status:'ok',conf:82},{num:'SQ-3',tool:'Vector Search',q:'Our current pricing and customer segment data',result:'Our pricing: $39/mo entry, $89/mo pro. 68% on entry tier. Highest churn at entry.',status:'ok',conf:90},{num:'SQ-4',tool:'Vector Search',q:'Customer differentiation analysis',result:'Integration depth is top NPS differentiator. Mid-market overlap with Competitor A.',status:'weak',conf:55}],memory:[{type:'k',icon:'✓',text:'Competitor A undercuts by $10/mo at entry tier'},{type:'k',icon:'✓',text:'Competitor B: enterprise only, no overlap in our segment'},{type:'g',icon:'✗',text:'SQ-4 differentiation data low confidence — needs retry'},{type:'k',icon:'✓',text:'Integration depth is top purchase driver (NPS)'}],retryLogs:[{icon:'⚠',text:'SQ-4 confidence: 55% — below threshold (70%)',cls:'retry'},{icon:'↺',text:'Refining: integration feature comparison data…',cls:'action'},{icon:'🔍',text:'Re-executing: "integration capabilities mid-market comparison"',cls:'info'},{icon:'📄',text:'47 native integrations vs Competitor A\'s 12. Primary purchase driver.',cls:'info'},{icon:'✓',text:'Retry confidence: 88% — passed.',cls:'success'}],synthesis:[{badge:'sq',label:'SQ-1+2',text:'Competitor A targets SMB/mid-market at lower price. Competitor B enterprise only.'},{badge:'sq',label:'SQ-3',text:'Our $39/mo entry is $10 above Competitor A. 68% of customers on entry with highest churn.'},{badge:'retry',label:'SQ-4 (retried)',text:'47 native integrations vs Competitor A\'s 12 — primary purchase driver.'}],sources:['Competitor A Website','Competitor B Website','Internal Pricing Data','Customer NPS Surveys'],ans:'Competitor A undercuts our entry price by $10/month with far fewer integrations. Competitor B does not compete in our segment. Recommended positioning: lead with integration depth — our 47 native integrations vs Competitor A\'s 12 is significant and defensible. Consider a $34/mo entry tier to close the price gap while maintaining margin on integration-led upsell.'},
+  compliance:{text:'Which of our processes may conflict with the new data privacy regulation?',complexity:'High — requires process docs + regulation text + conflict mapping',subqueries:[{num:'SQ-1',tool:'Vector Search',q:'Current data handling and processing procedures',result:'Data archival: 48-month retention. Onboarding: automated profiling on by default. Marketing: sharing with 3 vendors.',status:'ok',conf:86},{num:'SQ-2',tool:'Vector Search',q:'New data privacy regulation key clauses',result:'Art.17: Max 36-month retention. Art.22: Automated profiling requires explicit consent.',status:'weak',conf:48},{num:'SQ-3',tool:'API Call',q:'Map processes against regulation articles',result:'Retention conflict identified. Profiling conflict likely. Third-party sharing needs review.',status:'ok',conf:79}],memory:[{type:'k',icon:'✓',text:'48-month retention exceeds Art.17 limit of 36 months'},{type:'k',icon:'✓',text:'Automated profiling default violates Art.22 consent requirement'},{type:'g',icon:'✗',text:'SQ-2 retrieved outdated regulation version'},{type:'g',icon:'✗',text:'Third-party sharing compliance not fully assessed'}],retryLogs:[{icon:'⚠',text:'SQ-2 confidence: 48% — may be outdated version',cls:'retry'},{icon:'↺',text:'Fetching regulation v2.4 (effective Jan 2025)…',cls:'action'},{icon:'🔍',text:'Re-executing: "data privacy regulation v2.4 Art.17 Art.22 Art.28"',cls:'info'},{icon:'📄',text:'Art.28 added: third-party processors require Data Processing Agreements (DPAs).',cls:'info'},{icon:'✓',text:'Retry confidence: 91% — 3 conflicts confirmed.',cls:'success'}],synthesis:[{badge:'sq',label:'SQ-1',text:'3 processes flagged: data archival (48mo), profiling (default on), third-party sharing (3 vendors).'},{badge:'retry',label:'SQ-2 (retried)',text:'Regulation v2.4: Art.17 (36mo max), Art.22 (explicit consent), Art.28 (DPAs required).'},{badge:'sq',label:'SQ-3',text:'Confirmed: retention vs Art.17, profiling vs Art.22, vendor DPAs vs Art.28.'}],sources:['Process Documentation','Data Privacy Regulation v2.4','Vendor Contract Registry'],ans:'Three confirmed conflicts. (1) Art.17 — data archival retains records for 48 months, exceeding the 36-month maximum. (2) Art.22 — automated profiling is enabled by default, violating explicit opt-in consent requirements. (3) Art.28 — third-party data sharing arrangements with 3 vendors lack Data Processing Agreements, now mandatory.'},
+};
+const aTools=[{icon:'🔍',name:'Vector Search',desc:'Semantic search across internal docs'},{icon:'🌐',name:'Web Search',desc:'Live web retrieval for external data'},{icon:'🔌',name:'API Call',desc:'Structured data from external services'},{icon:'🧮',name:'Calculator',desc:'Numerical computation'},{icon:'📋',name:'Keyword Search',desc:'BM25 exact-term retrieval'}];
+let aStep=0,aData=null,aKey=null;
+const A=8, aNames=['Analyse & plan','Select tools','Execute sub-queries','Update memory','Validate confidence','Retry weak results','Ground & synthesise','Generate answer'];
+
+function aSetPill(el,key){document.querySelectorAll('#ch4 .query-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); aKey=key; document.getElementById('a-qinput').value=aQDB[key].text;}
+function aNext(){if(aStep<A)aShowStep(aStep+1);}
+function aRestart(){aStep=0;aKey=null; document.getElementById('a-controls').style.display='none'; msbHide(); document.getElementById('a-qinput').value=''; document.querySelectorAll('#ch4 .query-pill').forEach(p=>p.classList.remove('active')); document.getElementById('a-canvas').innerHTML='<div class="canvas-empty" id="a-empty"><div class="canvas-empty-icon">🤖</div><div class="canvas-empty-text">Select a task and deploy the agent</div></div>';}
+function aStart(){
+  if(!aKey){alert('Please select a task above.'); return;}
+  aData=aQDB[aKey]; aStep=0;
+  buildSteps('a',aNames);
+  document.getElementById('a-controls').style.display='block';
+  scrollToCanvas('a-canvas');
+  setTimeout(()=>aShowStep(1),300);
+}
+async function aShowStep(n){
+  aStep=n; scrollToCanvas('a-canvas'); updateSteps('a',n,A); showNextBtn('a',false);
+  if(n===1) await aRenderAnalyse();
+  if(n===2) await aRenderTools();
+  if(n===3) await aRenderExecute();
+  if(n===4) await aRenderMemory();
+  if(n===5) await aRenderValidate();
+  if(n===6) await aRenderRetry();
+  if(n===7) await aRenderSynth();
+  if(n===8) await aRenderAnswer();
+  if(n<A){ showNextBtn('a',true); setHint('a','Take your time. Click when ready.'); }
+  else{ showNextBtn('a',false); setHint('a','✓ Complete — you\'ve seen the full Agentic RAG process.'); }
+  msbUpdate('a', n);
+}
+async function aRenderAnalyse(){
+  setExp('a','The agent recognises this question is <strong>too complex for a single retrieval</strong>. It analyses what is needed and builds a structured plan of sub-queries before doing anything else.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Query analysis & execution plan</div><div class="agent-list" id="a-aw"></div></div>`;
+  const items=[{label:'Query received',content:`<span style="color:#9b6fc4;font-weight:600">"${aData.text}"</span>`},{label:'Complexity',content:`<span style="color:#4a90c4">${aData.complexity}</span>`},{label:'Execution plan',content:''}];
+  for(const item of items){
+    const card=document.createElement('div'); card.className='agent-card';
+    card.innerHTML=`<div class="ac-lbl">${item.label}</div><div class="ac-body">${item.content}</div>`;
+    document.getElementById('a-aw').appendChild(card); await delay(250); card.classList.add('in'); await delay(450);
+  }
+  const lastBody=document.querySelector('#a-aw .agent-card:last-child .ac-body');
+  const pl=document.createElement('div'); pl.className='plan-rows';
+  for(const sq of aData.subqueries){
+    const row=document.createElement('div'); row.className='plan-row';
+    row.innerHTML=`<span class="plan-num" style="color:#9b6fc4">${sq.num}</span><span>${sq.q}<span class="plan-src">Tool: ${sq.tool}</span></span>`;
+    pl.appendChild(row); await delay(200); row.classList.add('in'); await delay(280);
+  }
+  lastBody.appendChild(pl);
+}
+async function aRenderTools(){
+  setExp('a','The agent has a <strong>toolbox of retrieval methods</strong> — not just one. It picks the right tool for each sub-query.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Tool selection</div><div class="tool-grid" id="a-tg"></div></div>`;
+  const used=aData.subqueries.map(sq=>sq.tool);
+  for(const tool of aTools){
+    const isUsed=used.includes(tool.name);
+    const card=document.createElement('div'); card.className='tool-card'+(isUsed?' selected':'');
+    card.innerHTML=`<div class="tool-icon">${tool.icon}</div><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.desc}</div>${isUsed?'<span class="tool-badge">Selected ✓</span>':''}`;
+    document.getElementById('a-tg').appendChild(card); await delay(180); card.classList.add('in'); await delay(200);
+  }
+}
+async function aRenderExecute(){
+  setExp('a','Each sub-query fires against its selected tool. One result comes back <strong>weak</strong> — the agent flags it immediately. This will trigger a retry later.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Sub-query execution</div><div class="sq-list" id="a-sqw"></div></div>`;
+  for(const sq of aData.subqueries){
+    const row=document.createElement('div'); row.className='sq-row';
+    row.innerHTML=`<div class="sq-head"><span class="sq-num">${sq.num}</span><span class="sq-tool">${sq.tool}</span><span class="sq-status ${sq.status}">${sq.status==='ok'?'✓ Retrieved':'⚠ Weak result'}</span></div><div class="sq-q">${sq.q}</div><div class="sq-res">${sq.result}</div>`;
+    document.getElementById('a-sqw').appendChild(row); await delay(350); row.classList.add('in'); await delay(850);
+  }
+}
+async function aRenderMemory(){
+  setExp('a','As results arrive, the agent <strong>stores what it knows and flags what is missing</strong> in working memory — deciding whether to proceed or retry.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Working memory</div><div class="mem-list" id="a-mw"></div></div>`;
+  for(const mem of aData.memory){
+    const row=document.createElement('div'); row.className=`mem-row ${mem.type}`;
+    row.innerHTML=`<span class="mem-icon">${mem.icon}</span><span>${mem.text} <span class="mem-badge ${mem.type}">${mem.type==='k'?'known':'gap'}</span></span>`;
+    document.getElementById('a-mw').appendChild(row); await delay(300); row.classList.add('in'); await delay(480);
+  }
+}
+async function aRenderValidate(){
+  setExp('a','Confidence scores are assigned to each result. Results above <strong>70% pass</strong>. Below 70% triggers a retry. This is what separates Agentic RAG — it catches its own weak results.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Confidence validation — threshold 70%</div><div class="conf-list" id="a-cw"></div></div>`;
+  for(const sq of aData.subqueries){
+    const pass=sq.conf>=70;
+    const row=document.createElement('div'); row.className=`conf-row ${pass?'pass':'fail'}`;
+    row.innerHTML=`<div class="conf-lbl">${sq.num}: "${sq.q.substring(0,48)}…"</div><div class="conf-bar"><div class="conf-fill ${pass?'pass':'fail'}" id="a-cf${sq.num.replace('-','')}"></div></div><div class="conf-pct" id="a-cp${sq.num.replace('-','')}">0%</div><div class="conf-verdict ${pass?'pass':'fail'}">${pass?'✓ Pass':'✗ Retry'}</div>`;
+    document.getElementById('a-cw').appendChild(row); await delay(300); row.classList.add('in'); await delay(150);
+    let v=0; const id=sq.num.replace('-',''); const iv=setInterval(()=>{ v=Math.min(v+2,sq.conf); const f=document.getElementById('a-cf'+id); const p=document.getElementById('a-cp'+id); if(f)f.style.width=v+'%'; if(p)p.textContent=v+'%'; if(v>=sq.conf)clearInterval(iv); },16);
+    await delay(950);
+  }
+}
+async function aRenderRetry(){
+  setExp('a','The agent refines its strategy for weak sub-queries — changing search terms, trying different sources. <strong>Most AI gives you an answer even when unsure. Agentic RAG catches the gap.</strong>');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Retry log</div><div class="retry-log" id="a-rl"></div></div>`;
+  const log=document.getElementById('a-rl');
+  for(const line of aData.retryLogs){
+    const d=document.createElement('div'); d.className='rlog';
+    d.innerHTML=`<span>${line.icon}</span><span class="rlog-txt ${line.cls}">${line.text}</span>`;
+    log.appendChild(d); log.scrollTop=log.scrollHeight; await delay(150); d.classList.add('in'); await delay(680);
+  }
+}
+async function aRenderSynth(){
+  setExp('a','All validated results are assembled. The agent performs a <strong>grounding check</strong> — every claim must be supported by retrieved evidence before generating the answer.');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="vis-label">Grounding & synthesis</div><div class="synth-list" id="a-sw"></div></div>`;
+  for(const src of aData.synthesis){
+    const d=document.createElement('div'); d.className='synth-row';
+    d.innerHTML=`<span class="synth-badge ${src.badge}" style="${src.badge==='sq'?'border-color:#9b6fc4;color:#9b6fc4':'border-color:#4a90c4;color:#4a90c4'}">${src.label}</span><span>${src.text}</span>`;
+    document.getElementById('a-sw').appendChild(d); await delay(300); d.classList.add('in'); await delay(580);
+  }
+  const ground=document.createElement('div'); ground.className='synth-ground';
+  ground.innerHTML='<span>✓</span><span>Grounding check passed — all claims supported by retrieved evidence. Generating answer…</span>';
+  document.getElementById('a-sw').appendChild(ground); await delay(200); ground.classList.add('in');
+}
+async function aRenderAnswer(){
+  setExp('a','The final answer draws from multiple sources, validated results, and retried sub-queries. <strong>Every claim is grounded and traceable.</strong>');
+  const c=document.getElementById('a-canvas');
+  c.innerHTML=`<div class="vis-section"><div class="src-chips">${aData.sources.map(s=>`<span class="src-chip">${s}</span>`).join('')}</div><div class="answer-box" id="a-ans" style="border-left-color:#9b6fc4"></div><div class="answer-meta">Sources: <span>${aData.sources.length}</span> · Sub-queries: <span>${aData.subqueries.length}</span> · Retries: <span>1</span> · Grounding: <span>Passed</span></div></div>`;
+  await delay(300); typewrite(document.getElementById('a-ans'),aData.ans,18);
+}
+
+// ══════════════════════════════════════════
+// QUIZ
+// ══════════════════════════════════════════
+let quizAnswers={};
+const quizResults={
+  docs:  {title:'Traditional RAG',  why:'Your data is document-based and questions are semantic. Traditional RAG excels here — converting queries to embeddings and finding closest chunks gives fast, relevant answers at scale.', tags:['HR Policy Bots','Customer Support','Knowledge Bases','Product Docs']},
+  legal: {title:'Vectorless RAG',   why:'When <strong>exact wording matters</strong>, semantic similarity is dangerous. Vectorless RAG searches by precise keywords — no drift. The right clause is the exact clause.', tags:['Contract Review','Compliance Search','Medical Records','Patent Research']},
+  graph: {title:'Graph RAG',        why:'Your data has rich relationships between entities. Graph RAG doesn\'t search text — it traverses connections. Perfect for multi-hop questions where the answer depends on who is connected to what.', tags:['Fraud Detection','Supply Chain Risk','Org Intelligence','Drug Interactions']},
+  mixed: {title:'Agentic RAG',      why:'Your questions are complex and no single retrieval strategy is enough. Agentic RAG plans, breaks into sub-queries, validates, and retries — the most capable pattern.', tags:['Financial Research','Due Diligence','Competitive Intel','Legal Discovery']},
+};
+function quizAns(q,val){
+  quizAnswers[q]=val;
+  document.getElementById('qs'+q).classList.remove('active');
+  if(q<3){ document.getElementById('qs'+(q+1)).classList.add('active'); document.getElementById('quiz-bar').style.width=(q*33.3)+'%'; }
+  else{ document.getElementById('quiz-bar').style.width='100%'; quizShowResult(); }
+}
+function quizShowResult(){
+  const r=quizResults[quizAnswers[1]]||quizResults.docs;
+  document.getElementById('result-title').textContent=r.title;
+  document.getElementById('result-why').innerHTML=r.why;
+  document.getElementById('result-tags').innerHTML=r.tags.map(t=>`<span class="res-tag">${t}</span>`).join('');
+  document.getElementById('quiz-result').classList.add('active');
+  ['qs1','qs2','qs3'].forEach(s=>document.getElementById(s).classList.remove('active'));
+}
+function quizRestart(){
+  quizAnswers={}; document.getElementById('quiz-bar').style.width='0%';
+  document.getElementById('quiz-result').classList.remove('active');
+  document.getElementById('qs1').classList.add('active');
+}
+
+// Safe in-page navigation — avoids <a href> triggering external URL prompts
+function goToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ══════════════════════════════════════════
+// MOBILE STICKY STEP BAR
+// ══════════════════════════════════════════
+// activeChapter tracks which chapter is currently running
+// so Next/Restart always operate on the correct one
+let activeChapter = null; // 't' | 'v' | 'g' | 'a'
+
+const chapterConfig = {
+  t: { total: () => T, color: '#4a90c4', nextFn: () => tNext(), restartFn: () => { tRestart(); msbHide(); } },
+  v: { total: () => V, color: '#e8a838', nextFn: () => vNext(), restartFn: () => { vRestart(); msbHide(); } },
+  g: { total: () => G, color: '#4caf7d', nextFn: () => gNext(), restartFn: () => { gRestart(); msbHide(); } },
+  a: { total: () => A, color: '#9b6fc4', nextFn: () => aNext(), restartFn: () => { aRestart(); msbHide(); } },
+};
+
+function msbUpdate(prefix, step) {
+  if (window.innerWidth > 768) return;
+  activeChapter = prefix;
+  const cfg = chapterConfig[prefix];
+  const total = cfg.total();
+  const bar  = document.getElementById('msb');
+  const hint = document.getElementById('msb-hint');
+  const nxt  = document.getElementById('msb-next');
+  const rst  = document.getElementById('msb-restart');
+  bar.classList.add('visible');
+  nxt.style.background = cfg.color;
+  rst.style.display = 'block';
+  if (step < total) {
+    nxt.style.display = 'block';
+    hint.textContent = 'Step ' + step + ' of ' + total;
+  } else {
+    nxt.style.display = 'none';
+    hint.textContent = '✓ Complete';
+  }
+}
+
+function msbHide() {
+  document.getElementById('msb').classList.remove('visible');
+  document.getElementById('msb-next').style.display = 'none';
+  document.getElementById('msb-restart').style.display = 'none';
+  activeChapter = null;
+}
+
+function msbNext() {
+  if (!activeChapter) return;
+  chapterConfig[activeChapter].nextFn();
+}
+
+function msbRestart() {
+  if (!activeChapter) return;
+  chapterConfig[activeChapter].restartFn();
+}
+
+</script>
+
+</body>
+</html>
